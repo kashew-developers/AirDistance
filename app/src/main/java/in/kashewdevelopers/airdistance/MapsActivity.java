@@ -12,7 +12,10 @@ import android.text.TextWatcher;
 import android.util.Log;
 import android.view.View;
 import android.widget.EditText;
+import android.widget.LinearLayout;
+import android.widget.ProgressBar;
 import android.widget.RelativeLayout;
+import android.widget.TextView;
 
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
@@ -21,21 +24,25 @@ import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
-import com.google.android.gms.maps.model.PolygonOptions;
 import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
-import java.util.ArrayList;
 import java.util.List;
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
 
     private GoogleMap mMap;
 
+    // Widgets
     private FloatingActionButton controlToggleButton;
-    private RelativeLayout controlPanel;
+    private LinearLayout controlPanel;
+    RelativeLayout sourcePanel, destinationPanel;
     EditText sourceInputEditText, destinationInputEditText;
+    TextView sourceUseLocation, destinationUseLocation;
+    TextView sourceChooseOnMap, destinationChooseOnMap;
+    ProgressBar sourceProgressBar, destinationProgressBar;
+    TextView sourceNotFound, destinationNotFound;
 
     // Markers
     Marker sourceMarker, destinationMarker;
@@ -58,17 +65,54 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         // initialize widgets
         controlToggleButton = findViewById(R.id.controlToggleButton);
         controlPanel = findViewById(R.id.controlsPanel);
+        sourcePanel = findViewById(R.id.sourcePanel);
         sourceInputEditText = findViewById(R.id.sourceInput);
+        sourceUseLocation = findViewById(R.id.useSourceLocation);
+        sourceChooseOnMap = findViewById(R.id.useSourceOnMap);
+        sourceProgressBar = findViewById(R.id.sourceProgressBar);
+        sourceNotFound = findViewById(R.id.sourceNotFound);
+        destinationPanel = findViewById(R.id.destinationPanel);
         destinationInputEditText = findViewById(R.id.destinationInput);
+        destinationUseLocation = findViewById(R.id.useDestinationLocation);
+        destinationChooseOnMap = findViewById(R.id.useDestinationOnMap);
+        destinationProgressBar = findViewById(R.id.destinationProgressBar);
+        destinationNotFound = findViewById(R.id.destinationNotFound);
+
+        controlPanel.setVisibility(View.GONE);
+        sourceUseLocation.setVisibility(View.GONE);
+        sourceChooseOnMap.setVisibility(View.GONE);
+        destinationUseLocation.setVisibility(View.GONE);
+        destinationChooseOnMap.setVisibility(View.GONE);
 
 
         // other variables
         geocoder = new Geocoder(getApplicationContext());
 
 
+        sourceInputEditText.setOnFocusChangeListener(new View.OnFocusChangeListener() {
+            @Override
+            public void onFocusChange(View view, boolean b) {
+                int visibility = b ? View.VISIBLE : View.GONE;
+                sourceUseLocation.setVisibility(visibility);
+                sourceChooseOnMap.setVisibility(visibility);
+            }
+        });
+
+        destinationInputEditText.setOnFocusChangeListener(new View.OnFocusChangeListener() {
+            @Override
+            public void onFocusChange(View view, boolean b) {
+                int visibility = b ? View.VISIBLE : View.GONE;
+                destinationUseLocation.setVisibility(visibility);
+                destinationChooseOnMap.setVisibility(visibility);
+            }
+        });
+
+
         controlToggleButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                sourceInputEditText.clearFocus();
+                destinationInputEditText.clearFocus();
                 if (controlPanel.getVisibility() == View.GONE) {
                     controlPanel.setVisibility(View.VISIBLE);
                     controlToggleButton.setImageResource(R.drawable.close_icon);
@@ -94,7 +138,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 new Handler().postDelayed(new Runnable() {
                     @Override
                     public void run() {
-                        stringToLatLng(editable.toString(), "source");
+                        stringToSourceLatLng(editable.toString());
                     }
                 }, 50);
             }
@@ -114,7 +158,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 new Handler().postDelayed(new Runnable() {
                     @Override
                     public void run() {
-                        stringToLatLng(editable.toString(), "destination");
+                        stringToDestinationLatLng(editable.toString());
                     }
                 }, 50);
             }
@@ -123,22 +167,14 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
 
-    /**
-     * Manipulates the map once available.
-     * This callback is triggered when the map is ready to be used.
-     * This is where we can add markers or lines, add listeners or move the camera. In this case,
-     * we just add a marker near Sydney, Australia.
-     * If Google Play services is not installed on the device, the user will be prompted to install
-     * it inside the SupportMapFragment. This method will only be triggered once the user has
-     * installed Google Play services and returned to the app.
-     */
     @Override
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
 
-        sourceMarker = mMap.addMarker(new MarkerOptions().position(new LatLng(0, 0)));
+        // Initialize source marker, destination marker & distance line
+        sourceMarker = mMap.addMarker(new MarkerOptions().position(new LatLng(0, 0)).title("Source"));
         sourceMarker.setVisible(false);
-        destinationMarker = mMap.addMarker(new MarkerOptions().position(sourceMarker.getPosition()));
+        destinationMarker = mMap.addMarker(new MarkerOptions().position(sourceMarker.getPosition()).title("Destination"));
         destinationMarker.setVisible(false);
         distanceLine = mMap.addPolyline(new PolylineOptions()
                 .add(sourceMarker.getPosition(), sourceMarker.getPosition())
@@ -149,41 +185,43 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
 
-    private void stringToLatLng(String place, String inputLocation) {
-        Log.d("KashewDevelopers", "In stringToLatLng, place : " + place + " inputType : " + inputLocation);
-        if (place.length() > 3) {
-            try {
-                List<Address> addressList = geocoder.getFromLocationName(place, 1);
-                Log.d("KashewDevelopers", "In stringToLatLng, post getFromLocationName, listSize : " + addressList.size());
-                if (addressList.size() < 1) {
-                    if (inputLocation.equals("source"))
-                        setSourceMarker(null);
-                    else
-                        setDestinationMarker(null);
-                } else {
-                    Address address = addressList.get(0);
-
-                    if (inputLocation.equals("source")) {
-                        setSourceMarker(new LatLng(address.getLatitude(), address.getLongitude()));
-                    } else {
-                        setDestinationMarker(new LatLng(address.getLatitude(),
-                                address.getLongitude()));
-                    }
-                }
-            } catch (Exception e) {
-                Log.d("KashewDevelopers",
-                        "sourceInputEditText onDataChange, afterTextChanged : " +
-                                e.getMessage());
-                if (inputLocation.equals("source"))
-                    setSourceMarker(null);
-                else
-                    setDestinationMarker(null);
+    private LatLng stringToLatLng(String place) {
+        try {
+            List<Address> addressList = geocoder.getFromLocationName(place, 1);
+            Log.d("KashewDevelopers", "In stringToLatLng, listSize : " + addressList.size());
+            if (addressList.size() < 1) {
+                return null;
+            } else {
+                Address address = addressList.get(0);
+                return new LatLng(address.getLatitude(), address.getLongitude());
             }
+        } catch (Exception e) {
+            Log.d("KashewDevelopers",
+                    "sourceInputEditText onDataChange, afterTextChanged : " +
+                            e.getMessage());
+            return null;
+        }
+    }
+
+
+    private void stringToSourceLatLng(String place) {
+        if (place.length() > 2) {
+            sourceProgressBar.setVisibility(View.VISIBLE);
+            setSourceMarker(stringToLatLng(place));
+            sourceProgressBar.setVisibility(View.GONE);
         } else {
-            if (inputLocation.equals("source"))
-                setSourceMarker(null);
-            else
-                setDestinationMarker(null);
+            setSourceMarker(null);
+        }
+    }
+
+
+    private void stringToDestinationLatLng(String place) {
+        if (place.length() > 2) {
+            destinationProgressBar.setVisibility(View.VISIBLE);
+            setDestinationMarker(stringToLatLng(place));
+            destinationProgressBar.setVisibility(View.GONE);
+        } else {
+            setDestinationMarker(null);
         }
     }
 
@@ -193,13 +231,16 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         if (val != null) {
             sourceMarker.setPosition(val);
             sourceMarker.setVisible(true);
+            sourceNotFound.setVisibility(View.GONE);
             mMap.moveCamera(CameraUpdateFactory.newLatLng(val));
+            mMap.animateCamera(CameraUpdateFactory.zoomTo(11));
             if (destinationMarker.isVisible()) {
                 getDistance();
             }
         } else {
             sourceMarker.setVisible(false);
             distanceLine.setVisible(false);
+            sourceNotFound.setVisibility(View.VISIBLE);
         }
 
     }
@@ -210,13 +251,16 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         if (val != null) {
             destinationMarker.setPosition(val);
             destinationMarker.setVisible(true);
+            destinationNotFound.setVisibility(View.GONE);
             mMap.moveCamera(CameraUpdateFactory.newLatLng(val));
+            mMap.animateCamera(CameraUpdateFactory.zoomTo(11));
             if (sourceMarker.isVisible()) {
                 getDistance();
             }
         } else {
             destinationMarker.setVisible(false);
             distanceLine.setVisible(false);
+            destinationNotFound.setVisibility(View.VISIBLE);
         }
 
     }

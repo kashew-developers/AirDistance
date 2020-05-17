@@ -11,32 +11,168 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
-    <RelativeLayout
+    <!-- controls panel -->
+    <LinearLayout
         android:id="@+id/controlsPanel"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_alignParentStart="true"
         android:layout_margin="10dp"
         android:layout_toStartOf="@id/controlToggleButton"
-        android:background="#ffffff"
-        android:visibility="gone">
+        android:orientation="vertical">
 
-        <EditText
-            android:id="@+id/sourceInput"
-            android:layout_width="match_parent"
+        <!-- source panel -->
+        <RelativeLayout
+            android:id="@+id/sourcePanel"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:hint="@string/app_name" />
+            android:background="@drawable/input_background"
+            android:descendantFocusability="beforeDescendants"
+            android:focusableInTouchMode="true"
+            android:paddingStart="10dp"
+            android:paddingTop="5dp"
+            android:paddingEnd="10dp"
+            android:paddingBottom="5dp">
 
+            <ProgressBar
+                android:id="@+id/sourceProgressBar"
+                android:visibility="gone"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignTop="@id/sourceInput"
+                android:layout_alignBottom="@id/sourceInput"
+                android:layout_alignParentEnd="true" />
 
-        <EditText
-            android:id="@+id/destinationInput"
-            android:layout_width="match_parent"
+            <EditText
+                android:id="@+id/sourceInput"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_alignParentTop="true"
+                android:layout_marginStart="0dp"
+                android:layout_marginTop="0dp"
+                android:layout_marginEnd="0dp"
+                android:layout_marginBottom="0dp"
+                android:hint="@string/source"
+                android:importantForAutofill="no"
+                android:inputType="text"
+                android:maxLines="1"
+                android:textSize="18sp" />
+
+            <TextView
+                android:id="@+id/sourceNotFound"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/sourceInput"
+                android:visibility="gone"
+                android:layout_alignEnd="@id/sourceInput"
+                android:layout_marginTop="-8dp"
+                android:text="@string/place_not_found"
+                android:textSize="12sp"
+                android:textStyle="italic" />
+
+            <TextView
+                android:id="@+id/useSourceLocation"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/sourceInput"
+                android:layout_marginTop="10dp"
+                android:layout_marginBottom="10dp"
+                android:drawableStart="@drawable/location_icon"
+                android:drawablePadding="5dp"
+                android:text="@string/use_location"
+                android:textColor="#000000"
+                android:textSize="18sp" />
+
+            <TextView
+                android:id="@+id/useSourceOnMap"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/useSourceLocation"
+                android:layout_marginBottom="5dp"
+                android:drawableStart="@drawable/marker_icon"
+                android:drawablePadding="5dp"
+                android:text="@string/choose_map"
+                android:textColor="#000000"
+                android:textSize="18sp" />
+
+        </RelativeLayout>
+
+        <!-- destination panel -->
+        <RelativeLayout
+            android:id="@+id/destinationPanel"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_below="@id/sourceInput"
-            android:hint="@string/app_name" />
+            android:layout_marginTop="10dp"
+            android:background="@drawable/input_background"
+            android:paddingStart="10dp"
+            android:paddingTop="5dp"
+            android:paddingEnd="10dp"
+            android:paddingBottom="5dp">
 
+            <ProgressBar
+                android:id="@+id/destinationProgressBar"
+                android:visibility="gone"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignTop="@id/destinationInput"
+                android:layout_alignBottom="@id/destinationInput"
+                android:layout_alignParentEnd="true" />
 
-    </RelativeLayout>
+            <EditText
+                android:id="@+id/destinationInput"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_alignParentTop="true"
+                android:layout_marginStart="0dp"
+                android:layout_marginTop="0dp"
+                android:layout_marginEnd="0dp"
+                android:layout_marginBottom="0dp"
+                android:hint="@string/destination"
+                android:importantForAutofill="no"
+                android:inputType="text"
+                android:maxLines="1"
+                android:textSize="18sp" />
 
+            <TextView
+                android:id="@+id/destinationNotFound"
+                android:layout_width="wrap_content"
+                android:visibility="gone"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/destinationInput"
+                android:layout_alignEnd="@id/destinationInput"
+                android:layout_marginTop="-8dp"
+                android:text="@string/place_not_found"
+                android:textSize="12sp"
+                android:textStyle="italic" />
+
+            <TextView
+                android:id="@+id/useDestinationLocation"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/destinationInput"
+                android:layout_marginTop="10dp"
+                android:layout_marginBottom="10dp"
+                android:drawableStart="@drawable/location_icon"
+                android:drawablePadding="5dp"
+                android:text="@string/use_location"
+                android:textColor="#000000"
+                android:textSize="18sp" />
+
+            <TextView
+                android:id="@+id/useDestinationOnMap"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/useDestinationLocation"
+                android:layout_marginBottom="5dp"
+                android:drawableStart="@drawable/marker_icon"
+                android:drawablePadding="5dp"
+                android:text="@string/choose_map"
+                android:textColor="#000000"
+                android:textSize="18sp" />
+
+        </RelativeLayout>
+
+    </LinearLayout>
 
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/controlToggleButton"
