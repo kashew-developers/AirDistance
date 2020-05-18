@@ -183,4 +183,18 @@
         android:layout_marginEnd="20dp"
         android:src="@drawable/keyboard_icon" />
 
+    <TextView
+        android:id="@+id/tapOnMapMsg"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:background="#000000"
+        android:gravity="center"
+        android:padding="5dp"
+        android:text="@string/tap_on_map"
+        android:visibility="gone"
+        android:textColor="#ffffff"
+        android:textSize="15sp"
+        android:textStyle="bold" />
+
 </RelativeLayout>

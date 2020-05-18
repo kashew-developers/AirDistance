@@ -2,6 +2,7 @@ package in.kashewdevelopers.airdistance;
 
 import androidx.fragment.app.FragmentActivity;
 
+import android.app.Activity;
 import android.graphics.Color;
 import android.location.Address;
 import android.location.Geocoder;
@@ -11,6 +12,7 @@ import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Log;
 import android.view.View;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
@@ -43,12 +45,15 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     TextView sourceChooseOnMap, destinationChooseOnMap;
     ProgressBar sourceProgressBar, destinationProgressBar;
     TextView sourceNotFound, destinationNotFound;
+    boolean placeDestinationMarkerOnMap = false, placeSourceMarkerOnMap = false;
+    TextView tapOnMapMsg;
 
     // Markers
     Marker sourceMarker, destinationMarker;
     Polyline distanceLine;
 
     Geocoder geocoder;
+    InputMethodManager imm;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -77,6 +82,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         destinationChooseOnMap = findViewById(R.id.useDestinationOnMap);
         destinationProgressBar = findViewById(R.id.destinationProgressBar);
         destinationNotFound = findViewById(R.id.destinationNotFound);
+        tapOnMapMsg = findViewById(R.id.tapOnMapMsg);
 
         controlPanel.setVisibility(View.GONE);
         sourceUseLocation.setVisibility(View.GONE);
@@ -87,6 +93,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         // other variables
         geocoder = new Geocoder(getApplicationContext());
+        imm = (InputMethodManager) this.getSystemService(Activity.INPUT_METHOD_SERVICE);
 
 
         sourceInputEditText.setOnFocusChangeListener(new View.OnFocusChangeListener() {
@@ -95,6 +102,15 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 int visibility = b ? View.VISIBLE : View.GONE;
                 sourceUseLocation.setVisibility(visibility);
                 sourceChooseOnMap.setVisibility(visibility);
+
+                if (!b) {
+                    imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
+                } else {
+                    placeDestinationMarkerOnMap = placeSourceMarkerOnMap = false;
+                    sourceMarker.setDraggable(false);
+                    destinationMarker.setDraggable(false);
+                    tapOnMapMsg.setVisibility(View.GONE);
+                }
             }
         });
 
@@ -104,6 +120,15 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 int visibility = b ? View.VISIBLE : View.GONE;
                 destinationUseLocation.setVisibility(visibility);
                 destinationChooseOnMap.setVisibility(visibility);
+
+                if (!b) {
+                    imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
+                } else {
+                    placeDestinationMarkerOnMap = placeSourceMarkerOnMap = false;
+                    sourceMarker.setDraggable(false);
+                    destinationMarker.setDraggable(false);
+                    tapOnMapMsg.setVisibility(View.GONE);
+                }
             }
         });
 
@@ -119,6 +144,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 } else {
                     controlPanel.setVisibility(View.GONE);
                     controlToggleButton.setImageResource(R.drawable.keyboard_icon);
+                    placeSourceMarkerOnMap = placeDestinationMarkerOnMap = false;
+                    sourceMarker.setDraggable(false);
+                    destinationMarker.setDraggable(false);
+                    tapOnMapMsg.setVisibility(View.GONE);
                 }
             }
         });
@@ -164,6 +193,26 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             }
         });
 
+        sourceChooseOnMap.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                tapOnMapMsg.setVisibility(View.VISIBLE);
+                placeSourceMarkerOnMap = true;
+                sourceInputEditText.clearFocus();
+                sourceMarker.setDraggable(true);
+            }
+        });
+
+        destinationChooseOnMap.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                tapOnMapMsg.setVisibility(View.VISIBLE);
+                placeDestinationMarkerOnMap = true;
+                destinationInputEditText.clearFocus();
+                destinationMarker.setDraggable(true);
+            }
+        });
+
     }
 
 
@@ -181,6 +230,43 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 .width(5)
                 .color(Color.RED));
         distanceLine.setVisible(false);
+
+
+        mMap.setOnMapClickListener(new GoogleMap.OnMapClickListener() {
+            @Override
+            public void onMapClick(LatLng latLng) {
+                if (placeDestinationMarkerOnMap) {
+                    setDestinationMarker(latLng);
+                } else if (placeSourceMarkerOnMap) {
+                    setSourceMarker(latLng);
+                } else if (controlPanel.getVisibility() == View.VISIBLE) {
+                    controlToggleButton.performClick();
+                }
+            }
+        });
+
+
+        mMap.setOnMarkerDragListener(new GoogleMap.OnMarkerDragListener() {
+            @Override
+            public void onMarkerDragStart(Marker marker) {
+
+            }
+
+            @Override
+            public void onMarkerDrag(Marker marker) {
+
+            }
+
+            @Override
+            public void onMarkerDragEnd(Marker marker) {
+
+                if (placeDestinationMarkerOnMap) {
+                    setDestinationMarker(marker.getPosition());
+                } else if (placeSourceMarkerOnMap) {
+                    setSourceMarker(marker.getPosition());
+                }
+            }
+        });
 
     }
 
@@ -232,8 +318,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             sourceMarker.setPosition(val);
             sourceMarker.setVisible(true);
             sourceNotFound.setVisibility(View.GONE);
-            mMap.moveCamera(CameraUpdateFactory.newLatLng(val));
-            mMap.animateCamera(CameraUpdateFactory.zoomTo(11));
+
+            if (!placeSourceMarkerOnMap) {
+                mMap.moveCamera(CameraUpdateFactory.newLatLng(val));
+                mMap.animateCamera(CameraUpdateFactory.zoomTo(11));
+            }
+
             if (destinationMarker.isVisible()) {
                 getDistance();
             }
@@ -252,8 +342,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             destinationMarker.setPosition(val);
             destinationMarker.setVisible(true);
             destinationNotFound.setVisibility(View.GONE);
-            mMap.moveCamera(CameraUpdateFactory.newLatLng(val));
-            mMap.animateCamera(CameraUpdateFactory.zoomTo(11));
+
+            if (!placeDestinationMarkerOnMap) {
+                mMap.moveCamera(CameraUpdateFactory.newLatLng(val));
+                mMap.animateCamera(CameraUpdateFactory.zoomTo(11));
+            }
+
             if (sourceMarker.isVisible()) {
                 getDistance();
             }
@@ -276,5 +370,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 .color(Color.RED));
 
     }
+
 
 }

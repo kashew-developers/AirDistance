@@ -7,4 +7,6 @@
     <string name="choose_map">Choose on map</string>
     <string name="place_not_found">Could\'nt find this place</string>
 
+    <string name="tap_on_map">Tap anywhere on map to place marker</string>
+
 </resources>
