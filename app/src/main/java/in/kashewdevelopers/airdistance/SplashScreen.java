@@ -84,7 +84,7 @@ public class SplashScreen extends AppCompatActivity {
                     public void run() {
                         startActivity(new Intent(SplashScreen.this, MapsActivity.class));
                     }
-                }, 900);
+                }, 200);
             }
 
             @Override
