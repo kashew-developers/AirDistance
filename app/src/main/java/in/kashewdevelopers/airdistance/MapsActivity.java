@@ -1,13 +1,26 @@
 package in.kashewdevelopers.airdistance;
 
+import androidx.appcompat.app.AlertDialog;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.FragmentActivity;
 
+import android.Manifest;
 import android.app.Activity;
+import android.content.Context;
+import android.content.DialogInterface;
+import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.location.Address;
 import android.location.Geocoder;
+import android.location.Location;
+import android.location.LocationManager;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.Looper;
+import android.provider.Settings;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Log;
@@ -19,7 +32,13 @@ import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
+import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationCallback;
+import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationResult;
+import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
@@ -56,7 +75,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     Polyline distanceLine;
 
     Geocoder geocoder;
+    LocationCallback locationCallback = null;
     InputMethodManager imm;
+
+    int MY_PERMISSIONS_REQUEST_LOCATION = 123;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -216,6 +238,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 placeSourceMarkerOnMap = true;
                 sourceInputEditText.clearFocus();
                 sourceMarker.setDraggable(true);
+                sourceInputEditText.setText("");
             }
         });
 
@@ -226,6 +249,40 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 placeDestinationMarkerOnMap = true;
                 destinationInputEditText.clearFocus();
                 destinationMarker.setDraggable(true);
+                destinationInputEditText.setText("");
+            }
+        });
+
+
+        sourceUseLocation.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if (hasLocationPermission()) {
+                    if (isGPSOn()){
+                        getLocationAndSetMarker("Source");
+                    } else {
+                        Toast.makeText(MapsActivity.this, "Please turn on GPS",
+                                Toast.LENGTH_LONG).show();
+                    }
+                } else {
+                    askLocationPermission();
+                }
+            }
+        });
+
+        destinationUseLocation.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if (hasLocationPermission()) {
+                    if (isGPSOn()){
+                        getLocationAndSetMarker("Destination");
+                    } else {
+                        Toast.makeText(MapsActivity.this, "Please turn on GPS",
+                                Toast.LENGTH_LONG).show();
+                    }
+                } else {
+                    askLocationPermission();
+                }
             }
         });
 
@@ -393,15 +450,15 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 - destinationMarker.getPosition().latitude * Math.PI / 180;
         double diffLon = sourceMarker.getPosition().longitude * Math.PI / 180
                 - destinationMarker.getPosition().longitude * Math.PI / 180;
-        double a = Math.sin(diffLat/2) * Math.sin(diffLat/2) +
+        double a = Math.sin(diffLat / 2) * Math.sin(diffLat / 2) +
                 Math.cos(sourceMarker.getPosition().latitude * Math.PI / 180) *
                         Math.cos(destinationMarker.getPosition().latitude * Math.PI / 180) *
-                        Math.sin(diffLon/2) * Math.sin(diffLon/2);
-        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+                        Math.sin(diffLon / 2) * Math.sin(diffLon / 2);
+        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
         double d = earthRadius * c;
 
         String unit;
-        if ( d < 1 ) {
+        if (d < 1) {
             unit = "Meter";
             d *= 1000;
         } else {
@@ -411,6 +468,87 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         String formatted = getString(R.string.distance_msg, d, unit);
         distanceMsg.setText(formatted);
 
+    }
+
+
+    private boolean hasLocationPermission() {
+        return ContextCompat
+                .checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) ==
+                PackageManager.PERMISSION_GRANTED;
+    }
+
+
+    private void askLocationPermission() {
+        if (!ActivityCompat.shouldShowRequestPermissionRationale(this,
+                Manifest.permission.ACCESS_FINE_LOCATION)) {
+
+            new AlertDialog.Builder(this)
+                    .setTitle("Location Access Permission Needed")
+                    .setCancelable(false)
+                    .setMessage("Please give permission to get your location")
+                    .setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialogInterface, int i) {
+                            Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+                            Uri uri = Uri.fromParts("package", getPackageName(), null);
+                            intent.setData(uri);
+                            startActivity(intent);
+                        }
+                    })
+                    .setNegativeButton("Cancel", null)
+                    .create()
+                    .show();
+
+        } else {
+            ActivityCompat
+                    .requestPermissions(MapsActivity.this,
+                            new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
+                            MY_PERMISSIONS_REQUEST_LOCATION);
+        }
+    }
+
+
+    private void getLocationAndSetMarker(final String markerType) {
+
+        final FusedLocationProviderClient mFusedLocationClient =
+                LocationServices.getFusedLocationProviderClient(this);
+
+        final LocationRequest locationRequest = new LocationRequest();
+        locationRequest.setInterval(10);
+        locationRequest.setSmallestDisplacement(10);
+        locationRequest.setFastestInterval(10);
+        locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+
+        locationCallback = new LocationCallback() {
+            @Override
+            public void onLocationResult(LocationResult locationResult) {
+                LatLng position = null;
+                if (locationResult.getLastLocation() != null) {
+                    Location currentLocation = locationResult.getLastLocation();
+                    position = new LatLng(currentLocation.getLatitude(),
+                            currentLocation.getLongitude());
+
+                    mFusedLocationClient.removeLocationUpdates(locationCallback);
+                }
+
+                if (markerType.equals("Source")) {
+                    setSourceMarker(position);
+                } else if(markerType.equals("Destination")){
+                    setDestinationMarker(position);
+                }
+
+            }
+        };
+
+        mFusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, Looper.myLooper());
+
+    }
+
+
+    public boolean isGPSOn() {
+        LocationManager manager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+        if (manager == null) return false;
+        return manager.isProviderEnabled(LocationManager.GPS_PROVIDER);
     }
 
 
