@@ -12,6 +12,7 @@ import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Log;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
 import android.widget.LinearLayout;
@@ -46,7 +47,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     ProgressBar sourceProgressBar, destinationProgressBar;
     TextView sourceNotFound, destinationNotFound;
     boolean placeDestinationMarkerOnMap = false, placeSourceMarkerOnMap = false;
-    TextView tapOnMapMsg;
+    TextView tapOnMapMsg, distanceMsg;
+
+    RelativeLayout.LayoutParams belowControlPanel, belowControlPanelToggle;
 
     // Markers
     Marker sourceMarker, destinationMarker;
@@ -83,12 +86,23 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         destinationProgressBar = findViewById(R.id.destinationProgressBar);
         destinationNotFound = findViewById(R.id.destinationNotFound);
         tapOnMapMsg = findViewById(R.id.tapOnMapMsg);
+        distanceMsg = findViewById(R.id.distanceMsg);
 
         controlPanel.setVisibility(View.GONE);
         sourceUseLocation.setVisibility(View.GONE);
         sourceChooseOnMap.setVisibility(View.GONE);
         destinationUseLocation.setVisibility(View.GONE);
         destinationChooseOnMap.setVisibility(View.GONE);
+        distanceMsg.setVisibility(View.GONE);
+
+        belowControlPanel = new RelativeLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT);
+        belowControlPanel.setMargins(0, 10, 0, 0);
+        belowControlPanel.addRule(RelativeLayout.BELOW, controlPanel.getId());
+        belowControlPanelToggle = new RelativeLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT);
+        belowControlPanelToggle.setMargins(0, 20, 0, 0);
+        belowControlPanelToggle.addRule(RelativeLayout.BELOW, controlToggleButton.getId());
 
 
         // other variables
@@ -141,6 +155,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 if (controlPanel.getVisibility() == View.GONE) {
                     controlPanel.setVisibility(View.VISIBLE);
                     controlToggleButton.setImageResource(R.drawable.close_icon);
+                    distanceMsg.setLayoutParams(belowControlPanel);
                 } else {
                     controlPanel.setVisibility(View.GONE);
                     controlToggleButton.setImageResource(R.drawable.keyboard_icon);
@@ -148,6 +163,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     sourceMarker.setDraggable(false);
                     destinationMarker.setDraggable(false);
                     tapOnMapMsg.setVisibility(View.GONE);
+                    distanceMsg.setLayoutParams(belowControlPanelToggle);
                 }
             }
         });
@@ -259,7 +275,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
             @Override
             public void onMarkerDragEnd(Marker marker) {
-
                 if (placeDestinationMarkerOnMap) {
                     setDestinationMarker(marker.getPosition());
                 } else if (placeSourceMarkerOnMap) {
@@ -314,6 +329,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     private void setSourceMarker(LatLng val) {
 
+        distanceMsg.setVisibility(View.GONE);
         if (val != null) {
             sourceMarker.setPosition(val);
             sourceMarker.setVisible(true);
@@ -338,6 +354,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     private void setDestinationMarker(LatLng val) {
 
+        distanceMsg.setVisibility(View.GONE);
         if (val != null) {
             destinationMarker.setPosition(val);
             destinationMarker.setVisible(true);
@@ -368,6 +385,31 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 .add(sourceMarker.getPosition(), destinationMarker.getPosition())
                 .width(5)
                 .color(Color.RED));
+
+        distanceMsg.setVisibility(View.VISIBLE);
+
+        double earthRadius = 6378.137; // Radius of earth in KM
+        double diffLat = sourceMarker.getPosition().latitude * Math.PI / 180
+                - destinationMarker.getPosition().latitude * Math.PI / 180;
+        double diffLon = sourceMarker.getPosition().longitude * Math.PI / 180
+                - destinationMarker.getPosition().longitude * Math.PI / 180;
+        double a = Math.sin(diffLat/2) * Math.sin(diffLat/2) +
+                Math.cos(sourceMarker.getPosition().latitude * Math.PI / 180) *
+                        Math.cos(destinationMarker.getPosition().latitude * Math.PI / 180) *
+                        Math.sin(diffLon/2) * Math.sin(diffLon/2);
+        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        double d = earthRadius * c;
+
+        String unit;
+        if ( d < 1 ) {
+            unit = "Meter";
+            d *= 1000;
+        } else {
+            unit = "Km";
+        }
+
+        String formatted = getString(R.string.distance_msg, d, unit);
+        distanceMsg.setText(formatted);
 
     }
 
