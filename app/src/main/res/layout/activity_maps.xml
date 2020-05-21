@@ -14,7 +14,7 @@
     <!-- controls panel -->
     <LinearLayout
         android:id="@+id/controlsPanel"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_alignParentStart="true"
         android:layout_margin="10dp"
@@ -24,7 +24,7 @@
         <!-- source panel -->
         <RelativeLayout
             android:id="@+id/sourcePanel"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:background="@drawable/input_background"
             android:descendantFocusability="beforeDescendants"
@@ -33,15 +33,6 @@
             android:paddingTop="5dp"
             android:paddingEnd="10dp"
             android:paddingBottom="5dp">
-
-            <ProgressBar
-                android:id="@+id/sourceProgressBar"
-                android:visibility="gone"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_alignTop="@id/sourceInput"
-                android:layout_alignBottom="@id/sourceInput"
-                android:layout_alignParentEnd="true" />
 
             <EditText
                 android:id="@+id/sourceInput"
@@ -100,7 +91,7 @@
         <!-- destination panel -->
         <RelativeLayout
             android:id="@+id/destinationPanel"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="10dp"
             android:background="@drawable/input_background"
@@ -108,15 +99,6 @@
             android:paddingTop="5dp"
             android:paddingEnd="10dp"
             android:paddingBottom="5dp">
-
-            <ProgressBar
-                android:id="@+id/destinationProgressBar"
-                android:visibility="gone"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_alignTop="@id/destinationInput"
-                android:layout_alignBottom="@id/destinationInput"
-                android:layout_alignParentEnd="true" />
 
             <EditText
                 android:id="@+id/destinationInput"

@@ -50,7 +50,7 @@ public class SplashScreen extends AppCompatActivity {
                     public void run() {
                         animatePath();
                     }
-                }, 500);
+                }, 200);
             }
 
             @Override
