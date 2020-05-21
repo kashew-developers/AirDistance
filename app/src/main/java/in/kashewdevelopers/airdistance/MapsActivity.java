@@ -24,12 +24,12 @@ import android.provider.Settings;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Log;
+import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
 import android.widget.LinearLayout;
-import android.widget.ProgressBar;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -80,6 +80,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     int MY_PERMISSIONS_REQUEST_LOCATION = 123;
     float angleCounter = 0;
 
+    Toast gpsToast;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -128,6 +130,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         // other variables
         geocoder = new Geocoder(getApplicationContext());
         imm = (InputMethodManager) this.getSystemService(Activity.INPUT_METHOD_SERVICE);
+        gpsToast = Toast.makeText(this, "Plsease turn on GPS", Toast.LENGTH_LONG);
+        gpsToast.setGravity(Gravity.CENTER, 0, 0);
 
 
         sourceInputEditText.setOnFocusChangeListener(new View.OnFocusChangeListener() {
@@ -256,10 +260,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             public void onClick(View view) {
                 if (hasLocationPermission()) {
                     if (isGPSOn()){
+                        sourceInputEditText.setText("");
                         getLocationAndSetMarker("Source");
                     } else {
-                        Toast.makeText(MapsActivity.this, "Please turn on GPS",
-                                Toast.LENGTH_LONG).show();
+                        gpsToast.show();
                     }
                 } else {
                     askLocationPermission();
@@ -272,10 +276,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             public void onClick(View view) {
                 if (hasLocationPermission()) {
                     if (isGPSOn()){
+                        destinationInputEditText.setText("");
                         getLocationAndSetMarker("Destination");
                     } else {
-                        Toast.makeText(MapsActivity.this, "Please turn on GPS",
-                                Toast.LENGTH_LONG).show();
+                        gpsToast.show();
                     }
                 } else {
                     askLocationPermission();
@@ -545,10 +549,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 }
 
                 if (markerType.equals("Source")) {
-                    sourceInputEditText.setText("");
                     setSourceMarker(position);
                 } else if(markerType.equals("Destination")){
-                    destinationInputEditText.setText("");
                     setDestinationMarker(position);
                 }
 
