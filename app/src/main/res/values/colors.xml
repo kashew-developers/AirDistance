@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="colorPrimary">#008577</color>  <!-- action bar -->
-    <color name="colorPrimaryDark">#00574B</color>  <!-- notification bar -->
-    <color name="colorAccent">#D81B60</color>  <!-- effects -->
+    <color name="colorPrimary">#bd6200</color>  <!-- action bar -->
+    <color name="colorPrimaryDark">#D56F00</color>  <!-- notification bar -->
+    <color name="colorAccent">#E77900</color>  <!-- effects -->
 </resources>
