@@ -37,6 +37,16 @@
             android:paddingEnd="10dp"
             android:paddingBottom="5dp">
 
+            <ProgressBar
+                android:id="@+id/sourceProgressBar"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignTop="@id/sourceInput"
+                android:layout_alignEnd="@id/sourceInput"
+                android:layout_alignBottom="@id/sourceInput"
+                android:layout_marginTop="5dp"
+                android:layout_marginBottom="15dp" />
+
             <EditText
                 android:id="@+id/sourceInput"
                 android:layout_width="match_parent"
@@ -102,6 +112,16 @@
             android:paddingTop="5dp"
             android:paddingEnd="10dp"
             android:paddingBottom="5dp">
+
+            <ProgressBar
+                android:id="@+id/destinationProgressBar"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignTop="@id/destinationInput"
+                android:layout_alignEnd="@id/destinationInput"
+                android:layout_alignBottom="@id/destinationInput"
+                android:layout_marginTop="5dp"
+                android:layout_marginBottom="15dp" />
 
             <EditText
                 android:id="@+id/destinationInput"
