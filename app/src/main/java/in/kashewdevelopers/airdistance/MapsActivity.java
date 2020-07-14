@@ -1,6 +1,7 @@
 package in.kashewdevelopers.airdistance;
 
 import androidx.appcompat.app.AlertDialog;
+import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.FragmentActivity;
@@ -32,11 +33,10 @@ import android.view.Gravity;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.AutoCompleteTextView;
-import android.widget.EditText;
 import android.widget.FilterQueryProvider;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
-import android.widget.RelativeLayout;
 import android.widget.SimpleCursorAdapter;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -65,8 +65,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private FloatingActionButton controlToggleButton;
     private LinearLayout controlPanel;
     ProgressBar sourceProgressBar, destinationProgressBar;
-    RelativeLayout sourcePanel, destinationPanel;
+    ConstraintLayout sourcePanel, destinationPanel;
     AutoCompleteTextView sourceInputEditText, destinationInputEditText;
+    ImageView clearSource, clearDestination;
     TextView sourceUseLocation, destinationUseLocation;
     TextView sourceChooseOnMap, destinationChooseOnMap;
     TextView sourceNotFound, destinationNotFound;
@@ -277,7 +278,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         sourceProgressBar = findViewById(R.id.sourceProgressBar);
         sourcePanel = findViewById(R.id.sourcePanel);
         sourceInputEditText = findViewById(R.id.sourceInput);
-        sourceInputEditText.setThreshold(1);
+        clearSource = findViewById(R.id.sourceCloseIcon);
         sourceUseLocation = findViewById(R.id.useSourceLocation);
         sourceChooseOnMap = findViewById(R.id.useSourceOnMap);
         sourceNotFound = findViewById(R.id.sourceNotFound);
@@ -286,7 +287,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         destinationProgressBar = findViewById(R.id.destinationProgressBar);
         destinationPanel = findViewById(R.id.destinationPanel);
         destinationInputEditText = findViewById(R.id.destinationInput);
-        destinationInputEditText.setThreshold(1);
+        clearDestination = findViewById(R.id.destinationCloseIcon);
         destinationUseLocation = findViewById(R.id.useDestinationLocation);
         destinationChooseOnMap = findViewById(R.id.useDestinationOnMap);
         destinationNotFound = findViewById(R.id.destinationNotFound);
@@ -299,13 +300,17 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     public void setWidgetsVisibility() {
         controlPanel.setVisibility(View.GONE);
 
+        clearSource.setVisibility(View.GONE);
         sourceUseLocation.setVisibility(View.GONE);
         sourceChooseOnMap.setVisibility(View.GONE);
         sourceProgressBar.setVisibility(View.GONE);
+        sourceNotFound.setVisibility(View.GONE);
 
+        clearDestination.setVisibility(View.GONE);
         destinationUseLocation.setVisibility(View.GONE);
         destinationChooseOnMap.setVisibility(View.GONE);
         destinationProgressBar.setVisibility(View.GONE);
+        destinationNotFound.setVisibility(View.GONE);
 
         distanceMsg.setVisibility(View.GONE);
         tapOnMapMsg.setVisibility(View.GONE);
@@ -370,6 +375,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 }
 
                 sourceProgressBar.setVisibility(View.VISIBLE);
+                clearSource.setVisibility(View.GONE);
                 sourceNotFound.setVisibility(View.GONE);
 
                 Thread thread = new Thread() {
@@ -403,6 +409,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 }
 
                 destinationProgressBar.setVisibility(View.VISIBLE);
+                clearDestination.setVisibility(View.GONE);
                 destinationNotFound.setVisibility(View.GONE);
 
                 Thread thread = new Thread() {
@@ -533,6 +540,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             @Override
             public void run() {
 
+                if (sourceInputEditText.getText().length() > 0) {
+                    clearSource.setVisibility(View.VISIBLE);
+                } else {
+                    clearSource.setVisibility(View.GONE);
+                }
+
                 sourceProgressBar.setVisibility(View.GONE);
                 distanceMsg.setVisibility(View.GONE);
                 if (locationObject != null) {
@@ -559,7 +572,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 }
             }
         });
-
     }
 
     private void setDestinationMarker(final LocationObject locationObject) {
@@ -567,6 +579,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
+
+                if (destinationInputEditText.getText().length() > 0) {
+                    clearDestination.setVisibility(View.VISIBLE);
+                } else {
+                    clearDestination.setVisibility(View.GONE);
+                }
 
                 destinationProgressBar.setVisibility(View.GONE);
                 distanceMsg.setVisibility(View.GONE);
@@ -594,7 +612,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 }
             }
         });
-
     }
 
 
@@ -764,6 +781,16 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         if (dbHelper != null && db != null) {
             dbHelper.insert(db, place);
         }
+    }
+
+
+    // widget clicks
+    public void clearSourceClicked(View v) {
+        sourceInputEditText.setText("");
+    }
+
+    public void clearDestinationClicked(View v) {
+        destinationInputEditText.setText("");
     }
 
 }

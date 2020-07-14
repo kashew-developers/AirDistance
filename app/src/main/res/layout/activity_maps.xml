@@ -31,12 +31,13 @@
         app:layout_constraintTop_toTopOf="parent">
 
         <!-- source panel -->
-        <RelativeLayout
+        <androidx.constraintlayout.widget.ConstraintLayout
             android:id="@+id/sourcePanel"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:background="@drawable/input_background"
             android:descendantFocusability="beforeDescendants"
+            android:elevation="5dp"
             android:focusableInTouchMode="true"
             android:paddingStart="10dp"
             android:paddingTop="5dp"
@@ -45,74 +46,99 @@
 
             <ProgressBar
                 android:id="@+id/sourceProgressBar"
+                android:layout_width="30dp"
+                android:layout_height="30dp"
+                app:layout_constraintBottom_toBottomOf="@id/sourceInput"
+                app:layout_constraintEnd_toEndOf="@id/sourcePanel"
+                app:layout_constraintTop_toTopOf="@id/sourceInput" />
+
+            <ImageView
+                android:id="@+id/sourceCloseIcon"
+                android:layout_width="30dp"
+                android:layout_height="30dp"
+                android:contentDescription="@android:string/cancel"
+                android:onClick="clearSourceClicked"
+                android:src="@drawable/close_grey_icon"
+                app:layout_constraintBottom_toBottomOf="@id/sourceInput"
+                app:layout_constraintEnd_toEndOf="@id/sourcePanel"
+                app:layout_constraintTop_toTopOf="@id/sourceInput" />
+
+            <androidx.constraintlayout.widget.Barrier
+                android:id="@+id/sourceStatusBarrier"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_alignTop="@id/sourceInput"
-                android:layout_alignEnd="@id/sourceInput"
-                android:layout_alignBottom="@id/sourceInput"
-                android:layout_marginTop="5dp"
-                android:layout_marginBottom="15dp" />
+                app:barrierDirection="start"
+                app:constraint_referenced_ids="sourceProgressBar,sourceCloseIcon" />
 
             <AutoCompleteTextView
                 android:id="@+id/sourceInput"
-                android:layout_width="match_parent"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_alignParentTop="true"
-                android:layout_marginStart="0dp"
-                android:layout_marginTop="0dp"
-                android:layout_marginEnd="0dp"
-                android:layout_marginBottom="0dp"
                 android:hint="@string/source"
                 android:inputType="text"
                 android:maxLines="1"
-                android:textSize="18sp" />
+                android:textSize="18sp"
+                app:layout_constraintEnd_toStartOf="@id/sourceStatusBarrier"
+                app:layout_constraintStart_toStartOf="@id/sourcePanel"
+                app:layout_constraintTop_toTopOf="@id/sourcePanel" />
 
             <TextView
                 android:id="@+id/sourceNotFound"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_below="@id/sourceInput"
-                android:layout_alignEnd="@id/sourceInput"
-                android:layout_marginTop="-8dp"
                 android:text="@string/place_not_found"
                 android:textSize="12sp"
                 android:textStyle="italic"
-                android:visibility="gone" />
+                app:layout_constraintEnd_toEndOf="@id/sourceInput"
+                app:layout_constraintTop_toBottomOf="@id/sourceInput" />
+
+            <androidx.constraintlayout.widget.Barrier
+                android:id="@+id/sourceInputBarrier"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                app:barrierDirection="bottom"
+                app:constraint_referenced_ids="sourceInput,sourceNotFound" />
 
             <TextView
                 android:id="@+id/useSourceLocation"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_below="@id/sourceInput"
                 android:layout_marginTop="10dp"
-                android:layout_marginBottom="10dp"
                 android:drawableStart="@drawable/location_icon"
                 android:drawablePadding="5dp"
                 android:text="@string/use_location"
                 android:textColor="#000000"
-                android:textSize="18sp" />
+                android:textSize="18sp"
+                app:layout_constraintEnd_toEndOf="@id/sourcePanel"
+                app:layout_constraintStart_toStartOf="@id/sourcePanel"
+                app:layout_constraintTop_toBottomOf="@id/sourceInputBarrier" />
 
             <TextView
                 android:id="@+id/useSourceOnMap"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_below="@id/useSourceLocation"
-                android:layout_marginBottom="5dp"
+                android:layout_marginTop="10dp"
+                android:layout_marginBottom="10dp"
                 android:drawableStart="@drawable/marker_icon"
                 android:drawablePadding="5dp"
                 android:text="@string/choose_map"
                 android:textColor="#000000"
-                android:textSize="18sp" />
+                android:textSize="18sp"
+                app:layout_constraintBottom_toBottomOf="@id/sourcePanel"
+                app:layout_constraintEnd_toEndOf="@id/sourcePanel"
+                app:layout_constraintStart_toStartOf="@id/sourcePanel"
+                app:layout_constraintTop_toBottomOf="@id/useSourceLocation" />
 
-        </RelativeLayout>
+        </androidx.constraintlayout.widget.ConstraintLayout>
 
         <!-- destination panel -->
-        <RelativeLayout
+        <androidx.constraintlayout.widget.ConstraintLayout
             android:id="@+id/destinationPanel"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="10dp"
             android:background="@drawable/input_background"
+            android:elevation="5dp"
             android:paddingStart="10dp"
             android:paddingTop="5dp"
             android:paddingEnd="10dp"
@@ -120,68 +146,111 @@
 
             <ProgressBar
                 android:id="@+id/destinationProgressBar"
+                android:layout_width="30dp"
+                android:layout_height="30dp"
+                app:layout_constraintBottom_toBottomOf="@id/destinationInput"
+                app:layout_constraintEnd_toEndOf="@id/destinationPanel"
+                app:layout_constraintTop_toTopOf="@id/destinationInput" />
+
+            <ImageView
+                android:id="@+id/destinationCloseIcon"
+                android:layout_width="30dp"
+                android:layout_height="30dp"
+                android:contentDescription="@android:string/cancel"
+                android:onClick="clearDestinationClicked"
+                android:src="@drawable/close_grey_icon"
+                app:layout_constraintBottom_toBottomOf="@id/destinationInput"
+                app:layout_constraintEnd_toEndOf="@id/destinationPanel"
+                app:layout_constraintTop_toTopOf="@id/destinationInput" />
+
+            <androidx.constraintlayout.widget.Barrier
+                android:id="@+id/destinationStatusBarrier"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_alignTop="@id/destinationInput"
-                android:layout_alignEnd="@id/destinationInput"
-                android:layout_alignBottom="@id/destinationInput"
-                android:layout_marginTop="5dp"
-                android:layout_marginBottom="15dp" />
+                app:barrierDirection="start"
+                app:constraint_referenced_ids="destinationProgressBar,destinationCloseIcon" />
 
             <AutoCompleteTextView
                 android:id="@+id/destinationInput"
-                android:layout_width="match_parent"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_alignParentTop="true"
-                android:layout_marginStart="0dp"
-                android:layout_marginTop="0dp"
-                android:layout_marginEnd="0dp"
                 android:layout_marginBottom="0dp"
                 android:hint="@string/destination"
                 android:inputType="text"
                 android:maxLines="1"
-                android:textSize="18sp" />
+                android:textSize="18sp"
+                app:layout_constraintEnd_toStartOf="@id/destinationStatusBarrier"
+                app:layout_constraintStart_toStartOf="@id/destinationPanel"
+                app:layout_constraintTop_toTopOf="@id/destinationPanel" />
 
             <TextView
                 android:id="@+id/destinationNotFound"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_below="@id/destinationInput"
-                android:layout_alignEnd="@id/destinationInput"
-                android:layout_marginTop="-8dp"
                 android:text="@string/place_not_found"
                 android:textSize="12sp"
                 android:textStyle="italic"
-                android:visibility="gone" />
+                app:layout_constraintEnd_toEndOf="@id/destinationInput"
+                app:layout_constraintTop_toBottomOf="@id/destinationInput" />
+
+            <androidx.constraintlayout.widget.Barrier
+                android:id="@+id/destinationInputBarrier"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                app:barrierDirection="bottom"
+                app:constraint_referenced_ids="destinationInput,destinationNotFound" />
 
             <TextView
                 android:id="@+id/useDestinationLocation"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_below="@id/destinationInput"
                 android:layout_marginTop="10dp"
-                android:layout_marginBottom="10dp"
                 android:drawableStart="@drawable/location_icon"
                 android:drawablePadding="5dp"
                 android:text="@string/use_location"
                 android:textColor="#000000"
-                android:textSize="18sp" />
+                android:textSize="18sp"
+                app:layout_constraintEnd_toEndOf="@id/destinationPanel"
+                app:layout_constraintStart_toStartOf="@id/destinationPanel"
+                app:layout_constraintTop_toBottomOf="@id/destinationInputBarrier" />
 
             <TextView
                 android:id="@+id/useDestinationOnMap"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_below="@id/useDestinationLocation"
-                android:layout_marginBottom="5dp"
+                android:layout_marginTop="10dp"
+                android:layout_marginBottom="10dp"
                 android:drawableStart="@drawable/marker_icon"
                 android:drawablePadding="5dp"
                 android:text="@string/choose_map"
                 android:textColor="#000000"
-                android:textSize="18sp" />
+                android:textSize="18sp"
+                app:layout_constraintBottom_toBottomOf="@id/destinationPanel"
+                app:layout_constraintEnd_toEndOf="@id/destinationPanel"
+                app:layout_constraintStart_toStartOf="@id/destinationPanel"
+                app:layout_constraintTop_toBottomOf="@id/useDestinationLocation" />
 
-        </RelativeLayout>
+        </androidx.constraintlayout.widget.ConstraintLayout>
 
     </LinearLayout>
+
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/controlToggleButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="50dp"
+        android:layout_marginEnd="20dp"
+        android:src="@drawable/keyboard_icon"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <androidx.constraintlayout.widget.Barrier
+        android:id="@+id/controlsBarrier"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:barrierDirection="bottom"
+        app:constraint_referenced_ids="controlToggleButton,controlsPanel"
+        tools:layout_editor_absoluteY="106dp" />
 
     <TextView
         android:id="@+id/distanceMsg"
@@ -195,16 +264,6 @@
         android:textColor="#ffffff"
         android:textStyle="bold"
         app:layout_constraintTop_toBottomOf="@id/controlsBarrier" />
-
-    <com.google.android.material.floatingactionbutton.FloatingActionButton
-        android:id="@+id/controlToggleButton"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="50dp"
-        android:layout_marginEnd="20dp"
-        android:src="@drawable/keyboard_icon"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
 
     <TextView
         android:id="@+id/tapOnMapMsg"
@@ -220,13 +279,5 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent" />
-
-    <androidx.constraintlayout.widget.Barrier
-        android:id="@+id/controlsBarrier"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        app:barrierDirection="bottom"
-        app:constraint_referenced_ids="controlToggleButton,controlsPanel"
-        tools:layout_editor_absoluteY="106dp" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
