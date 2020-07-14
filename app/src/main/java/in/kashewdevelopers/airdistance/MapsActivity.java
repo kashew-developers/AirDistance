@@ -13,12 +13,14 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.graphics.Color;
 import android.location.Address;
 import android.location.Geocoder;
 import android.location.Location;
 import android.location.LocationManager;
+import android.net.ConnectivityManager;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Looper;
@@ -29,10 +31,13 @@ import android.util.Log;
 import android.view.Gravity;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
+import android.widget.AutoCompleteTextView;
 import android.widget.EditText;
+import android.widget.FilterQueryProvider;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.RelativeLayout;
+import android.widget.SimpleCursorAdapter;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -56,23 +61,22 @@ import java.util.List;
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
 
-    private GoogleMap mMap;
-
     // Widgets
     private FloatingActionButton controlToggleButton;
     private LinearLayout controlPanel;
     ProgressBar sourceProgressBar, destinationProgressBar;
     RelativeLayout sourcePanel, destinationPanel;
-    EditText sourceInputEditText, destinationInputEditText;
+    AutoCompleteTextView sourceInputEditText, destinationInputEditText;
     TextView sourceUseLocation, destinationUseLocation;
     TextView sourceChooseOnMap, destinationChooseOnMap;
     TextView sourceNotFound, destinationNotFound;
-    boolean placeDestinationMarkerOnMap = false, placeSourceMarkerOnMap = false;
     TextView tapOnMapMsg, distanceMsg;
 
-    // Markers
+    // Map Elements
+    private GoogleMap mMap;
     Marker sourceMarker, destinationMarker;
     Polyline distanceLine;
+    boolean placeDestinationMarkerOnMap = false, placeSourceMarkerOnMap = false;
 
     Geocoder geocoder;
     LocationCallback locationCallback = null;
@@ -85,6 +89,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     // database
     private SQLiteHelper dbHelper;
     private SQLiteDatabase db;
+    SimpleCursorAdapter adapter;
+    Cursor cursor;
 
 
     @Override
@@ -99,17 +105,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             mapFragment.getMapAsync(this);
 
 
-        // widget related initializations
         initialize();
-
-        dbHelper = new SQLiteHelper(this);
-        try {
-            db = dbHelper.getReadableDatabase();
-        } catch (Exception e) {
-            db = null;
-            Log.d("KashewDevelopers", "Error : " + e.getMessage());
-        }
-
 
         controlToggleButton.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -223,11 +219,53 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         setWidgetsVisibility();
 
-        // other variables
         geocoder = new Geocoder(getApplicationContext());
         imm = (InputMethodManager) this.getSystemService(Activity.INPUT_METHOD_SERVICE);
+
         gpsToast = Toast.makeText(this, "Please turn on GPS", Toast.LENGTH_LONG);
         gpsToast.setGravity(Gravity.CENTER, 0, 0);
+
+        initializeDbElements();
+    }
+
+    public void initializeDbElements() {
+        dbHelper = new SQLiteHelper(this);
+        try {
+            db = dbHelper.getReadableDatabase();
+
+            cursor = dbHelper.search(db, "");
+
+            adapter = new SimpleCursorAdapter(this, R.layout.suggestion_list_layout,
+                    cursor, new String[]{"NAME"}, new int[]{R.id.text});
+
+            adapter.setCursorToStringConverter(new SimpleCursorAdapter.CursorToStringConverter() {
+                @Override
+                public CharSequence convertToString(Cursor cursor) {
+                    return cursor.getString(1);
+                }
+            });
+
+            adapter.setFilterQueryProvider(new FilterQueryProvider() {
+                @Override
+                public Cursor runQuery(CharSequence charSequence) {
+                    if (db != null) {
+                        cursor = dbHelper.search(db, charSequence.toString());
+                    }
+                    return cursor;
+                }
+            });
+
+            sourceInputEditText.setAdapter(adapter);
+            sourceInputEditText.setThreshold(1);
+
+            destinationInputEditText.setAdapter(adapter);
+            destinationInputEditText.setThreshold(1);
+        } catch (Exception e) {
+            db = null;
+            Log.d("KashewDevelopers", "Error : " + e.getMessage());
+        }
+
+
     }
 
     public void initializeWidgets() {
@@ -239,6 +277,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         sourceProgressBar = findViewById(R.id.sourceProgressBar);
         sourcePanel = findViewById(R.id.sourcePanel);
         sourceInputEditText = findViewById(R.id.sourceInput);
+        sourceInputEditText.setThreshold(1);
         sourceUseLocation = findViewById(R.id.useSourceLocation);
         sourceChooseOnMap = findViewById(R.id.useSourceOnMap);
         sourceNotFound = findViewById(R.id.sourceNotFound);
@@ -247,6 +286,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         destinationProgressBar = findViewById(R.id.destinationProgressBar);
         destinationPanel = findViewById(R.id.destinationPanel);
         destinationInputEditText = findViewById(R.id.destinationInput);
+        destinationInputEditText.setThreshold(1);
         destinationUseLocation = findViewById(R.id.useDestinationLocation);
         destinationChooseOnMap = findViewById(R.id.useDestinationOnMap);
         destinationNotFound = findViewById(R.id.destinationNotFound);
@@ -258,13 +298,16 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     public void setWidgetsVisibility() {
         controlPanel.setVisibility(View.GONE);
+
         sourceUseLocation.setVisibility(View.GONE);
         sourceChooseOnMap.setVisibility(View.GONE);
+        sourceProgressBar.setVisibility(View.GONE);
+
         destinationUseLocation.setVisibility(View.GONE);
         destinationChooseOnMap.setVisibility(View.GONE);
-        distanceMsg.setVisibility(View.GONE);
-        sourceProgressBar.setVisibility(View.GONE);
         destinationProgressBar.setVisibility(View.GONE);
+
+        distanceMsg.setVisibility(View.GONE);
         tapOnMapMsg.setVisibility(View.GONE);
     }
 
@@ -298,7 +341,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 destinationChooseOnMap.setVisibility(visibility);
 
                 if (!hasFocus) {
-                    imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
+                    try {
+                        imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
+                    } catch (Exception e) {
+                        Log.d("KashewDevelopers", "Exception e : " + e.getMessage());
+                    }
                 } else {
                     disableMarkerPlacement();
                 }
@@ -318,6 +365,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
             @Override
             public void afterTextChanged(final Editable editable) {
+                if (!isNetworkConnected()) {
+                    return;
+                }
+
                 sourceProgressBar.setVisibility(View.VISIBLE);
                 sourceNotFound.setVisibility(View.GONE);
 
@@ -347,6 +398,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
             @Override
             public void afterTextChanged(final Editable editable) {
+                if (!isNetworkConnected()) {
+                    return;
+                }
+
                 destinationProgressBar.setVisibility(View.VISIBLE);
                 destinationNotFound.setVisibility(View.GONE);
 
@@ -440,7 +495,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             List<Address> addressList = geocoder.getFromLocationName(place, 10);
             if (addressList.size() >= 1) {
                 Address address = addressList.get(0);
+
                 writePlaceToDB(address.getAddressLine(0));
+
                 return new LocationObject(address.getAddressLine(0),
                         address.getLatitude(), address.getLongitude());
             }
@@ -541,7 +598,17 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
 
-    // gps & permission
+    // network, gps & permission
+    public boolean isNetworkConnected() {
+        ConnectivityManager cm =
+                (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+
+        if (cm == null)
+            return true;
+
+        return cm.getActiveNetworkInfo() != null && cm.getActiveNetworkInfo().isConnected();
+    }
+
     private boolean hasLocationPermission() {
         return ContextCompat
                 .checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) ==

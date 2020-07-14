@@ -33,8 +33,8 @@ public class SQLiteHelper extends SQLiteOpenHelper {
 
     public Cursor search(SQLiteDatabase db, String placeName) {
         String condition = "NAME like '%" + placeName + "%'";
-        return db.query("PLACES", new String[]{"NAME"}, condition,
-                null, null, null, "NAME ASC");
+        return db.query("PLACES", null, condition,
+                null, null, null, "NAME ASC", "5");
     }
 
     @Override
