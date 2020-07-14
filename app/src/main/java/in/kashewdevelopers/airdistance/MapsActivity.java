@@ -13,6 +13,7 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.database.sqlite.SQLiteDatabase;
 import android.graphics.Color;
 import android.location.Address;
 import android.location.Geocoder;
@@ -81,6 +82,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     Toast gpsToast;
 
+    // database
+    private SQLiteHelper dbHelper;
+    private SQLiteDatabase db;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -96,6 +101,14 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         // widget related initializations
         initialize();
+
+        dbHelper = new SQLiteHelper(this);
+        try {
+            db = dbHelper.getReadableDatabase();
+        } catch (Exception e) {
+            db = null;
+            Log.d("KashewDevelopers", "Error : " + e.getMessage());
+        }
 
 
         controlToggleButton.setOnClickListener(new View.OnClickListener() {
@@ -427,6 +440,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             List<Address> addressList = geocoder.getFromLocationName(place, 10);
             if (addressList.size() >= 1) {
                 Address address = addressList.get(0);
+                writePlaceToDB(address.getAddressLine(0));
                 return new LocationObject(address.getAddressLine(0),
                         address.getLatitude(), address.getLongitude());
             }
@@ -677,6 +691,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     }
                 })
                 .rotation(angle);
+    }
+
+    public void writePlaceToDB(String place) {
+        if (dbHelper != null && db != null) {
+            dbHelper.insert(db, place);
+        }
     }
 
 }
