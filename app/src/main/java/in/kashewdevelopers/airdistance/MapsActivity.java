@@ -27,7 +27,6 @@ import android.text.TextWatcher;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.View;
-import android.view.ViewGroup;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
 import android.widget.LinearLayout;
@@ -70,8 +69,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     boolean placeDestinationMarkerOnMap = false, placeSourceMarkerOnMap = false;
     TextView tapOnMapMsg, distanceMsg;
 
-    RelativeLayout.LayoutParams belowControlPanel, belowControlPanelToggle;
-
     // Markers
     Marker sourceMarker, destinationMarker;
     Polyline distanceLine;
@@ -111,10 +108,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
                 if (controlPanel.getVisibility() == View.GONE) {
                     controlPanel.setVisibility(View.VISIBLE);
-                    distanceMsg.setLayoutParams(belowControlPanel);
                 } else {
                     controlPanel.setVisibility(View.GONE);
-                    distanceMsg.setLayoutParams(belowControlPanelToggle);
                     disableMarkerPlacement();
                 }
             }
@@ -131,6 +126,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     @Override
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
+
 
         // Initialize source marker, destination marker & distance line
         sourceMarker = mMap.addMarker(new MarkerOptions()
@@ -170,10 +166,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         // drag marker
         mMap.setOnMarkerDragListener(new GoogleMap.OnMarkerDragListener() {
             @Override
-            public void onMarkerDragStart(Marker marker) { }
+            public void onMarkerDragStart(Marker marker) {
+            }
 
             @Override
-            public void onMarkerDrag(Marker marker) { }
+            public void onMarkerDrag(Marker marker) {
+            }
 
             @Override
             public void onMarkerDragEnd(Marker marker) {
@@ -206,25 +204,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
 
-
-    // initializers
+    // initialize
     public void initialize() {
         initializeWidgets();
 
         setWidgetsVisibility();
-
-        // distanceMsg textview is displayed below the controlPanel if the controlPanel is visible
-        belowControlPanel = new RelativeLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT);
-        belowControlPanel.setMargins(0, 10, 0, 0);
-        belowControlPanel.addRule(RelativeLayout.BELOW, controlPanel.getId());
-
-        // if controlPanel is GONE, distanceMsg is displayed below controlToggleButton
-        belowControlPanelToggle = new RelativeLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT);
-        belowControlPanelToggle.setMargins(0, 20, 0, 0);
-        belowControlPanelToggle.addRule(RelativeLayout.BELOW, controlToggleButton.getId());
-
 
         // other variables
         geocoder = new Geocoder(getApplicationContext());
@@ -268,8 +252,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         distanceMsg.setVisibility(View.GONE);
         sourceProgressBar.setVisibility(View.GONE);
         destinationProgressBar.setVisibility(View.GONE);
+        tapOnMapMsg.setVisibility(View.GONE);
     }
-
 
 
     // listeners
@@ -282,7 +266,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 sourceChooseOnMap.setVisibility(visibility);
 
                 if (!hasFocus) {
-                    imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
+                    try {
+                        imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
+                    } catch (Exception e) {
+                        Log.d("KashewDevelopers", "Exception e : " + e.getMessage());
+                    }
                 } else {
                     disableMarkerPlacement();
                 }
@@ -320,7 +308,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 sourceProgressBar.setVisibility(View.VISIBLE);
                 sourceNotFound.setVisibility(View.GONE);
 
-                Thread thread = new Thread(){
+                Thread thread = new Thread() {
                     @Override
                     public void run() {
                         try {
@@ -349,7 +337,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 destinationProgressBar.setVisibility(View.VISIBLE);
                 destinationNotFound.setVisibility(View.GONE);
 
-                Thread thread = new Thread(){
+                Thread thread = new Thread() {
                     @Override
                     public void run() {
                         try {
@@ -399,7 +387,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             @Override
             public void onClick(View view) {
                 if (hasLocationPermission()) {
-                    if (isGPSOn()){
+                    if (isGPSOn()) {
                         sourceInputEditText.clearFocus();
                         sourceInputEditText.setText("");
                         sourceNotFound.setVisibility(View.GONE);
@@ -417,7 +405,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             @Override
             public void onClick(View view) {
                 if (hasLocationPermission()) {
-                    if (isGPSOn()){
+                    if (isGPSOn()) {
                         destinationInputEditText.clearFocus();
                         destinationInputEditText.setText("");
                         destinationNotFound.setVisibility(View.GONE);
@@ -433,7 +421,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
 
-
     // place to latlng
     private LocationObject stringToLatLng(String place) {
         try {
@@ -441,7 +428,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             if (addressList.size() >= 1) {
                 Address address = addressList.get(0);
                 return new LocationObject(address.getAddressLine(0),
-                                            address.getLatitude(), address.getLongitude());
+                        address.getLatitude(), address.getLongitude());
             }
         } catch (Exception e) {
             Log.d("KashewDevelopers",
@@ -466,7 +453,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             setDestinationMarker(null);
         }
     }
-
 
 
     // set marker
@@ -497,7 +483,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 } else {
                     sourceMarker.setVisible(false);
                     distanceLine.setVisible(false);
-                    sourceNotFound.setVisibility(View.VISIBLE);
+                    if (sourceInputEditText.getText().length() > 0)
+                        sourceNotFound.setVisibility(View.VISIBLE);
                 }
             }
         });
@@ -531,13 +518,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 } else {
                     destinationMarker.setVisible(false);
                     distanceLine.setVisible(false);
-                    destinationNotFound.setVisibility(View.VISIBLE);
+                    if (destinationInputEditText.getText().length() > 0)
+                        destinationNotFound.setVisibility(View.VISIBLE);
                 }
             }
         });
 
     }
-
 
 
     // gps & permission
@@ -604,19 +591,19 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 }
 
                 if (markerType.equals("Source")) {
-                    if( currentLocation == null )
+                    if (currentLocation == null)
                         setSourceMarker(null);
                     else
                         setSourceMarker(new LocationObject("Source",
-                                                            currentLocation.getLatitude(),
-                                                            currentLocation.getLongitude()));
-                } else if(markerType.equals("Destination")){
-                    if( currentLocation == null )
+                                currentLocation.getLatitude(),
+                                currentLocation.getLongitude()));
+                } else if (markerType.equals("Destination")) {
+                    if (currentLocation == null)
                         setDestinationMarker(null);
                     else
                         setDestinationMarker(new LocationObject("Destination",
-                                                                currentLocation.getLatitude(),
-                                                                currentLocation.getLongitude()));
+                                currentLocation.getLatitude(),
+                                currentLocation.getLongitude()));
                 }
 
             }
@@ -627,13 +614,16 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
 
-
     // functionality
     public void disableMarkerPlacement() {
-        placeDestinationMarkerOnMap = placeSourceMarkerOnMap = false;
-        sourceMarker.setDraggable(false);
-        destinationMarker.setDraggable(false);
-        tapOnMapMsg.setVisibility(View.GONE);
+        try {
+            placeDestinationMarkerOnMap = placeSourceMarkerOnMap = false;
+            sourceMarker.setDraggable(false);
+            destinationMarker.setDraggable(false);
+            tapOnMapMsg.setVisibility(View.GONE);
+        } catch (Exception e) {
+            Log.d("KashewDevelopers", "Exception e : " + e.getMessage());
+        }
     }
 
     private void getDistance() {
@@ -669,7 +659,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         String formatted = getString(R.string.distance_msg, d, unit);
         distanceMsg.setText(formatted);
-
     }
 
     public void animateAndChangeControlToggle() {
@@ -689,4 +678,5 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 })
                 .rotation(angle);
     }
+
 }
