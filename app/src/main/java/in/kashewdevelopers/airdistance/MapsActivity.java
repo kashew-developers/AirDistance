@@ -13,6 +13,7 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
@@ -62,7 +63,7 @@ import java.util.List;
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
 
     // Widgets
-    private FloatingActionButton controlToggleButton;
+    private FloatingActionButton controlToggleButton, distanceUnitButton;
     private LinearLayout controlPanel;
     ProgressBar sourceProgressBar, destinationProgressBar;
     ConstraintLayout sourcePanel, destinationPanel;
@@ -124,6 +125,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 }
             }
         });
+
+        controlToggleButton.performClick();
 
 
         // set listeners
@@ -272,6 +275,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     public void initializeWidgets() {
         // control widgets
         controlToggleButton = findViewById(R.id.controlToggleButton);
+        distanceUnitButton = findViewById(R.id.distanceUnitButton);
         controlPanel = findViewById(R.id.controlsPanel);
 
         // source widgets
@@ -298,6 +302,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
     public void setWidgetsVisibility() {
+        distanceUnitButton.setVisibility(View.GONE);
         controlPanel.setVisibility(View.GONE);
 
         clearSource.setVisibility(View.GONE);
@@ -495,6 +500,24 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         });
     }
 
+    public void distanceUnitButtonClicked(View v) {
+        final String[] userTypes = {"Kilometers", "Miles"};
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle(getText(R.string.distance_in));
+        builder.setItems(userTypes, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialogInterface, int i) {
+                if (userTypes[i].equals("Kilometers")) {
+                    setUnitPreference("Km");
+                } else if (userTypes[i].equals("Miles")) {
+                    setUnitPreference("Mi");
+                }
+                getDistance();
+            }
+        });
+        builder.show();
+    }
+
 
     // place to latlng
     private LocationObject stringToLatLng(String place) {
@@ -567,6 +590,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 } else {
                     sourceMarker.setVisible(false);
                     distanceLine.setVisible(false);
+                    distanceUnitButton.setVisibility(View.GONE);
                     if (sourceInputEditText.getText().length() > 0)
                         sourceNotFound.setVisibility(View.VISIBLE);
                 }
@@ -607,6 +631,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 } else {
                     destinationMarker.setVisible(false);
                     distanceLine.setVisible(false);
+                    distanceUnitButton.setVisibility(View.GONE);
                     if (destinationInputEditText.getText().length() > 0)
                         destinationNotFound.setVisibility(View.VISIBLE);
                 }
@@ -725,15 +750,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
     private void getDistance() {
-
         distanceLine.remove();
 
         distanceLine = mMap.addPolyline(new PolylineOptions()
                 .add(sourceMarker.getPosition(), destinationMarker.getPosition())
                 .width(5)
                 .color(Color.RED));
-
-        distanceMsg.setVisibility(View.VISIBLE);
 
         double earthRadius = 6378.137; // Radius of earth in KM
         double diffLat = sourceMarker.getPosition().latitude * Math.PI / 180
@@ -745,18 +767,53 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                         Math.cos(destinationMarker.getPosition().latitude * Math.PI / 180) *
                         Math.sin(diffLon / 2) * Math.sin(diffLon / 2);
         double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        double d = earthRadius * c;
 
-        String unit;
-        if (d < 1) {
-            unit = "Meter";
-            d *= 1000;
+        handleDistanceUnit(earthRadius * c);
+    }
+
+    public void handleDistanceUnit(double distanceInKm) {
+        String unit = getUnitPreference();
+        double distance;
+
+        if( unit.equals("Km") ) {
+            distanceUnitButton.setImageResource(R.drawable.km_icon);
+            if (distanceInKm < 1) {
+                distance = distanceInKm * 1000;
+                if( distance > 1 )
+                    unit = "Meters";
+                else
+                    unit = "Meter";
+            } else {
+                distance = distanceInKm;
+            }
         } else {
-            unit = "Km";
+            distanceUnitButton.setImageResource(R.drawable.mile_icon);
+            distance = distanceInKm * 0.62;
+            if (distance < 1) {
+                distance = distance * 1760;
+                if( distance > 1 )
+                    unit = "Yards";
+                else
+                    unit = "Yard";
+            }
         }
 
-        String formatted = getString(R.string.distance_msg, d, unit);
+        String formatted = getString(R.string.distance_msg, distance, unit);
         distanceMsg.setText(formatted);
+        distanceMsg.setVisibility(View.VISIBLE);
+        distanceUnitButton.setVisibility(View.VISIBLE);
+    }
+
+    public String getUnitPreference() {
+        SharedPreferences prefs = getSharedPreferences("distanceUnit", MODE_PRIVATE);
+        return prefs.getString("unit", "Km");
+    }
+
+    public void setUnitPreference(String unit) {
+        SharedPreferences.Editor editor =
+                getSharedPreferences("distanceUnit", MODE_PRIVATE).edit();
+        editor.putString("unit", unit);
+        editor.apply();
     }
 
     public void animateAndChangeControlToggle() {

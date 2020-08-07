@@ -21,11 +21,8 @@
         android:id="@+id/controlsPanel"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginStart="10dp"
-        android:layout_marginTop="40dp"
-        android:layout_marginEnd="10dp"
-        android:layout_marginBottom="10dp"
         android:orientation="vertical"
+        android:paddingTop="40dp"
         app:layout_constraintEnd_toStartOf="@id/controlToggleButton"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent">
@@ -35,6 +32,8 @@
             android:id="@+id/sourcePanel"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:layout_marginEnd="10dp"
             android:background="@drawable/input_background"
             android:descendantFocusability="beforeDescendants"
             android:elevation="5dp"
@@ -136,7 +135,10 @@
             android:id="@+id/destinationPanel"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
             android:layout_marginTop="10dp"
+            android:layout_marginEnd="10dp"
+            android:layout_marginBottom="10dp"
             android:background="@drawable/input_background"
             android:elevation="5dp"
             android:paddingStart="10dp"
@@ -244,12 +246,26 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/distanceUnitButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:onClick="distanceUnitButtonClicked"
+        android:scaleType="center"
+        android:src="@drawable/km_icon"
+        app:fabSize="mini"
+        app:layout_constraintEnd_toEndOf="@id/controlToggleButton"
+        app:layout_constraintStart_toStartOf="@id/controlToggleButton"
+        app:layout_constraintTop_toBottomOf="@id/controlToggleButton"
+        app:maxImageSize="20dp" />
+
     <androidx.constraintlayout.widget.Barrier
         android:id="@+id/controlsBarrier"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         app:barrierDirection="bottom"
-        app:constraint_referenced_ids="controlToggleButton,controlsPanel"
+        app:constraint_referenced_ids="distanceUnitButton,controlsPanel"
         tools:layout_editor_absoluteY="106dp" />
 
     <TextView
