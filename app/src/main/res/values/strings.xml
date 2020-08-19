@@ -12,4 +12,16 @@
     <string name="distance_msg">Distance : %1$.2f %2$s</string>
     <string name="distance_in">Distance in</string>
 
+    <string name="history">History</string>
+    <string name="clear_history">Clear History</string>
+    <string name="nothing">Nothing to show!</string>
+
+    <string name="drawer_open">History Open</string>
+    <string name="drawer_close">History Close</string>
+
+    <string name="to">to</string>
+    <string name="delete">Delete</string>
+    <string name="cancel">Cancel</string>
+    <string name="are_you_sure">Are you sure?</string>
+
 </resources>

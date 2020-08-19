@@ -1,9 +1,12 @@
 package in.kashewdevelopers.airdistance;
 
+import androidx.appcompat.app.ActionBarDrawerToggle;
 import androidx.appcompat.app.AlertDialog;
 import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.core.view.GravityCompat;
+import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.fragment.app.FragmentActivity;
 
 import android.Manifest;
@@ -32,11 +35,14 @@ import android.text.TextWatcher;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.View;
+import android.view.Window;
+import android.view.WindowManager;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.AutoCompleteTextView;
 import android.widget.FilterQueryProvider;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.ListView;
 import android.widget.ProgressBar;
 import android.widget.SimpleCursorAdapter;
 import android.widget.TextView;
@@ -74,6 +80,14 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     TextView sourceNotFound, destinationNotFound;
     TextView tapOnMapMsg, distanceMsg;
 
+    // Navigation Drawer UI
+    DrawerLayout drawerLayout;
+    ActionBarDrawerToggle drawerToggle;
+    ConstraintLayout navigationDrawer;
+    ImageView deleteButton;
+    TextView nothingToShowTv;
+    ListView historyList;
+
     // Map Elements
     private GoogleMap mMap;
     Marker sourceMarker, destinationMarker;
@@ -83,6 +97,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     Geocoder geocoder;
     LocationCallback locationCallback = null;
     InputMethodManager imm;
+    TextWatcher sourceTextWatcher, destinationTextWatcher;
 
     int MY_PERMISSIONS_REQUEST_LOCATION = 123;
 
@@ -94,10 +109,19 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     SimpleCursorAdapter adapter;
     Cursor cursor;
 
+    // history
+    private HistoryDbHelper dbHelperHist;
+    private SQLiteDatabase dbHist;
+    HistoryAdapter adapterHist;
+    Cursor cursorHist;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        requestWindowFeature(Window.FEATURE_NO_TITLE);
+        getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
+                WindowManager.LayoutParams.FLAG_FULLSCREEN);
         setContentView(R.layout.activity_maps);
 
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
@@ -134,6 +158,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         setTextChangeListeners();
         setChooseOnMapListeners();
         setMyLocationListeners();
+        setHistoryClickListener();
     }
 
     @Override
@@ -213,7 +238,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     @Override
     public void onBackPressed() {
-        moveTaskToBack(true);
+        if (drawerLayout.isDrawerOpen(GravityCompat.START)) {
+            drawerLayout.closeDrawer(GravityCompat.START);
+        } else {
+            moveTaskToBack(true);
+        }
     }
 
 
@@ -229,7 +258,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         gpsToast = Toast.makeText(this, "Please turn on GPS", Toast.LENGTH_LONG);
         gpsToast.setGravity(Gravity.CENTER, 0, 0);
 
+        drawerToggle = new ActionBarDrawerToggle(this, drawerLayout,
+                R.string.drawer_open, R.string.drawer_close);
+        drawerLayout.addDrawerListener(drawerToggle);
+
         initializeDbElements();
+        initializeHistDbElements();
     }
 
     public void initializeDbElements() {
@@ -268,8 +302,29 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             db = null;
             Log.d("KashewDevelopers", "Error : " + e.getMessage());
         }
+    }
 
+    public void initializeHistDbElements() {
+        dbHelperHist = new HistoryDbHelper(this);
+        try {
+            dbHist = dbHelperHist.getReadableDatabase();
 
+            cursorHist = dbHelperHist.get(dbHist);
+
+            adapterHist = new HistoryAdapter(this, cursorHist, 0);
+
+            historyList.setAdapter(adapterHist);
+
+            if (cursorHist.getCount() == 0) {
+                nothingToShowTv.setVisibility(View.VISIBLE);
+            } else {
+                nothingToShowTv.setVisibility(View.GONE);
+            }
+
+        } catch (Exception e) {
+            dbHist = null;
+            Log.d("KashewDevelopers", "Error : " + e.getMessage());
+        }
     }
 
     public void initializeWidgets() {
@@ -299,6 +354,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         // info widgets
         tapOnMapMsg = findViewById(R.id.tapOnMapMsg);
         distanceMsg = findViewById(R.id.distanceMsg);
+
+        // navigation drawer
+        drawerLayout = findViewById(R.id.drawerLayout);
+        navigationDrawer = findViewById(R.id.slider);
+        deleteButton = findViewById(R.id.clear_history_image);
+        nothingToShowTv = findViewById(R.id.nothing_to_show);
+        historyList = findViewById(R.id.history_list);
     }
 
     public void setWidgetsVisibility() {
@@ -364,7 +426,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
     public void setTextChangeListeners() {
-        sourceInputEditText.addTextChangedListener(new TextWatcher() {
+        sourceTextWatcher = new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {
             }
@@ -396,9 +458,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 };
                 thread.start();
             }
-        });
+        };
+        sourceInputEditText.addTextChangedListener(sourceTextWatcher);
 
-        destinationInputEditText.addTextChangedListener(new TextWatcher() {
+        destinationTextWatcher = new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {
             }
@@ -431,7 +494,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
                 thread.start();
             }
-        });
+        };
+        destinationInputEditText.addTextChangedListener(destinationTextWatcher);
     }
 
     public void setChooseOnMapListeners() {
@@ -500,22 +564,55 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         });
     }
 
-    public void distanceUnitButtonClicked(View v) {
-        final String[] userTypes = {"Kilometers", "Miles"};
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle(getText(R.string.distance_in));
-        builder.setItems(userTypes, new DialogInterface.OnClickListener() {
+    public void setHistoryClickListener() {
+        // show history on map
+        adapterHist.setOnHistoryClickListener(new HistoryAdapter.OnHistoryClickListener() {
             @Override
-            public void onClick(DialogInterface dialogInterface, int i) {
-                if (userTypes[i].equals("Kilometers")) {
-                    setUnitPreference("Km");
-                } else if (userTypes[i].equals("Miles")) {
-                    setUnitPreference("Mi");
+            public void onHistoryClickListener(View view) {
+                String srcName = ((TextView) (view.findViewById(R.id.src))).getText().toString();
+                String srcLL = ((TextView) (view.findViewById(R.id.srcLL))).getText().toString();
+                if (srcName.equals(srcLL)) {
+                    srcName = "Source";
                 }
-                getDistance();
+
+                String dstName = ((TextView) (view.findViewById(R.id.dst))).getText().toString();
+                String dstLL = ((TextView) (view.findViewById(R.id.dstLL))).getText().toString();
+                if (dstName.equals(dstLL)) {
+                    dstName = "Destination";
+                }
+
+                setHistoryMarkers(srcName, srcLL, dstName, dstLL);
             }
         });
-        builder.show();
+
+        // delete individual history
+        adapterHist.setOnDeleteClickListener(new HistoryAdapter.OnDeleteClickListener() {
+            @Override
+            public void onDeleteClickListener(final String hashCode) {
+                AlertDialog.Builder builder = new AlertDialog.Builder(MapsActivity.this);
+                builder.setTitle(R.string.delete);
+                builder.setMessage(R.string.are_you_sure);
+                builder.setNegativeButton(R.string.cancel, null);
+                builder.setPositiveButton(R.string.delete, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialogInterface, int i) {
+                        dbHelperHist.delete(dbHist, hashCode);
+
+                        cursorHist = dbHelperHist.get(dbHist);
+                        adapterHist.swapCursor(cursorHist);
+                        adapterHist.notifyDataSetChanged();
+                        if (cursorHist.getCount() == 0) {
+                            nothingToShowTv.setVisibility(View.VISIBLE);
+                            deleteButton.setVisibility(View.GONE);
+                        } else {
+                            nothingToShowTv.setVisibility(View.GONE);
+                            deleteButton.setVisibility(View.VISIBLE);
+                        }
+                    }
+                });
+                builder.show();
+            }
+        });
     }
 
 
@@ -637,6 +734,36 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 }
             }
         });
+    }
+
+    private void setHistoryMarkers(String srcName, String srcLL, String dstName, String dstLL) {
+        sourceInputEditText.removeTextChangedListener(sourceTextWatcher);
+        sourceInputEditText.setText("");
+        sourceInputEditText.addTextChangedListener(sourceTextWatcher);
+        sourceMarker.setVisible(false);
+
+        destinationInputEditText.removeTextChangedListener(destinationTextWatcher);
+        destinationInputEditText.setText("");
+        destinationInputEditText.addTextChangedListener(destinationTextWatcher);
+        destinationMarker.setVisible(false);
+
+        if (controlPanel.getVisibility() == View.VISIBLE) {
+            controlToggleButton.performClick();
+        }
+
+        String[] srcLaLn = srcLL.split(",");
+        double sourceLat = Double.parseDouble(srcLaLn[0]);
+        double sourceLng = Double.parseDouble(srcLaLn[1]);
+        LocationObject source = new LocationObject(srcName, sourceLat, sourceLng);
+        setSourceMarker(source);
+
+        String[] dstLaLn = dstLL.split(",");
+        double destinationLat = Double.parseDouble(dstLaLn[0]);
+        double destinationLng = Double.parseDouble(dstLaLn[1]);
+        LocationObject destination = new LocationObject(dstName, destinationLat, destinationLng);
+        setDestinationMarker(destination);
+
+        drawerLayout.closeDrawer(GravityCompat.START);
     }
 
 
@@ -769,17 +896,19 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
         handleDistanceUnit(earthRadius * c);
+
+        insertHistory();
     }
 
     public void handleDistanceUnit(double distanceInKm) {
         String unit = getUnitPreference();
         double distance;
 
-        if( unit.equals("Km") ) {
+        if (unit.equals("Km")) {
             distanceUnitButton.setImageResource(R.drawable.km_icon);
             if (distanceInKm < 1) {
                 distance = distanceInKm * 1000;
-                if( distance > 1 )
+                if (distance > 1)
                     unit = "Meters";
                 else
                     unit = "Meter";
@@ -791,7 +920,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             distance = distanceInKm * 0.62;
             if (distance < 1) {
                 distance = distance * 1760;
-                if( distance > 1 )
+                if (distance > 1)
                     unit = "Yards";
                 else
                     unit = "Yard";
@@ -840,6 +969,38 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
     }
 
+    public void insertHistory() {
+        if (dbHelperHist == null || dbHist == null)
+            return;
+
+        String srcName = sourceMarker.getTitle();
+        String srcLL = sourceMarker.getPosition().latitude + "," +
+                sourceMarker.getPosition().longitude;
+        if (srcName.length() == 0 || srcName.equals("Source")) {
+            srcName = srcLL;
+        }
+
+        String dstName = destinationMarker.getTitle();
+        String dstLL = destinationMarker.getPosition().latitude + "," +
+                destinationMarker.getPosition().longitude;
+        if (dstName.length() == 0 || dstName.equals("Destination")) {
+            dstName = dstLL;
+        }
+
+        String distance = distanceMsg.getText().toString();
+
+        dbHelperHist.insert(dbHist, srcName, srcLL, dstName, dstLL, distance);
+        cursorHist = dbHelperHist.get(dbHist);
+        adapterHist.swapCursor(cursorHist);
+        adapterHist.notifyDataSetChanged();
+
+        if (cursorHist.getCount() == 0) {
+            nothingToShowTv.setVisibility(View.VISIBLE);
+        } else {
+            nothingToShowTv.setVisibility(View.GONE);
+        }
+    }
+
 
     // widget clicks
     public void clearSourceClicked(View v) {
@@ -848,6 +1009,51 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     public void clearDestinationClicked(View v) {
         destinationInputEditText.setText("");
+    }
+
+    public void distanceUnitButtonClicked(View v) {
+        final String[] userTypes = {"Kilometers", "Miles"};
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle(getText(R.string.distance_in));
+        builder.setItems(userTypes, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialogInterface, int i) {
+                if (userTypes[i].equals("Kilometers")) {
+                    setUnitPreference("Km");
+                } else if (userTypes[i].equals("Miles")) {
+                    setUnitPreference("Mi");
+                }
+                getDistance();
+            }
+        });
+        builder.show();
+    }
+
+    public void openDrawer(View v) {
+        drawerLayout.openDrawer(GravityCompat.START);
+    }
+
+    public void deleteHistoryButton(View v) {
+        if (dbHelperHist == null || dbHist == null) {
+            return;
+        }
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle(R.string.clear_history);
+        builder.setMessage(R.string.are_you_sure);
+        builder.setPositiveButton(R.string.delete, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialogInterface, int i) {
+                dbHelperHist.deleteAll(dbHist);
+
+                cursorHist = dbHelperHist.get(dbHist);
+                adapterHist.swapCursor(cursorHist);
+                adapterHist.notifyDataSetChanged();
+                nothingToShowTv.setVisibility(View.VISIBLE);
+            }
+        });
+        builder.setNegativeButton(R.string.cancel, null);
+        builder.show();
     }
 
 }
