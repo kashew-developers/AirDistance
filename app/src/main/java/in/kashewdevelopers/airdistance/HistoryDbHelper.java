@@ -8,9 +8,12 @@ import android.database.sqlite.SQLiteOpenHelper;
 
 public class HistoryDbHelper extends SQLiteOpenHelper {
 
+    // table details
     private static final String DB_NAME = "history";
     private static final int DB_VERSION = 1;
 
+
+    // columns in table
     static String SRC_NAME = "src_name";
     static String SRC_LL = "src_lat_lng";
     static String DST_NAME = "dst_name";
@@ -23,6 +26,7 @@ public class HistoryDbHelper extends SQLiteOpenHelper {
     HistoryDbHelper(Context context) {
         super(context, DB_NAME, null, DB_VERSION);
     }
+
 
     @Override
     public void onCreate(SQLiteDatabase db) {
@@ -39,6 +43,7 @@ public class HistoryDbHelper extends SQLiteOpenHelper {
         db.execSQL(creatingDb);
     }
 
+
     void insert(SQLiteDatabase db, String srcName, String srcLL, String dstName, String dstLL, String distance) {
         String hash = srcName + srcLL + dstName + dstLL;
         hash = String.valueOf(hash.hashCode());
@@ -54,21 +59,25 @@ public class HistoryDbHelper extends SQLiteOpenHelper {
         db.insert(DB_NAME, null, data);
     }
 
+
     Cursor get(SQLiteDatabase db) {
         return db.query(DB_NAME, null, null, null, null,
                 null, TIME + " DESC");
     }
 
+
     void deleteAll(SQLiteDatabase db) {
         db.delete(DB_NAME, null, null);
     }
+
 
     void delete(SQLiteDatabase db, String hashCode) {
         db.delete(DB_NAME, HASH + " = ?", new String[]{hashCode});
     }
 
+
     @Override
     public void onUpgrade(SQLiteDatabase sqLiteDatabase, int i, int i1) {
-
     }
+
 }
