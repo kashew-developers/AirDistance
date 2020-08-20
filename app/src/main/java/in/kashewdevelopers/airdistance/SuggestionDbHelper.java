@@ -13,12 +13,6 @@ public class SuggestionDbHelper extends SQLiteOpenHelper {
     private static final int DB_VERSION = 1;
 
 
-    // columns in table
-    static String PLACE_NAME = "place_name";
-    static String PLACE_LAT = "place_latitude";
-    static String PLACE_LNG = "place_longitude";
-
-
     SuggestionDbHelper(Context context) {
         super(context, DB_NAME, null, DB_VERSION);
     }
@@ -28,26 +22,22 @@ public class SuggestionDbHelper extends SQLiteOpenHelper {
     public void onCreate(SQLiteDatabase db) {
         String creatingDb = "CREATE TABLE " + DB_NAME + " (" +
                 "_id INTEGER PRIMARY KEY AUTOINCREMENT," +
-                PLACE_NAME + " TEXT UNIQUE ON CONFLICT REPLACE," +
-                PLACE_LAT + " DOUBLE," +
-                PLACE_LNG + " DOUBLE);";
+                "NAME TEXT UNIQUE);";
         db.execSQL(creatingDb);
     }
 
 
-    public long insert(SQLiteDatabase db, String placeName, double lat, double lng) {
+    void insert(SQLiteDatabase db, String placeName) {
         ContentValues data = new ContentValues();
-        data.put(PLACE_NAME, placeName);
-        data.put(PLACE_LAT, lat);
-        data.put(PLACE_LNG, lng);
+        data.put("NAME", placeName);
 
-        return db.insert(DB_NAME, null, data);
+        db.insert(DB_NAME, null, data);
     }
 
 
-    public Cursor search(SQLiteDatabase db, String placeName) {
-        String condition = PLACE_NAME + " like '%" + placeName + "%'";
-        String orderBy = PLACE_NAME + " ASC";
+    Cursor search(SQLiteDatabase db, String placeName) {
+        String condition = "NAME like '%" + placeName + "%'";
+        String orderBy = "NAME ASC";
         String limit = "5";
 
         return db.query(DB_NAME, null, condition, null,
@@ -56,7 +46,7 @@ public class SuggestionDbHelper extends SQLiteOpenHelper {
 
 
     @Override
-    public void onUpgrade(SQLiteDatabase sqLiteDatabase, int i, int i1) {
+    public void onUpgrade(SQLiteDatabase sqLiteDatabase, int oldVersion, int newVersion) {
     }
 
 }

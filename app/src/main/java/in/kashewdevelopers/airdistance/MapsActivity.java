@@ -12,6 +12,7 @@ import androidx.fragment.app.FragmentActivity;
 import android.Manifest;
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -79,46 +80,52 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     TextView sourceChooseOnMap, destinationChooseOnMap;
     TextView sourceNotFound, destinationNotFound;
     TextView tapOnMapMsg, distanceMsg;
+    TextWatcher sourceTextWatcher, destinationTextWatcher;
+
 
     // Navigation Drawer UI
     DrawerLayout drawerLayout;
-    ActionBarDrawerToggle drawerToggle;
     ConstraintLayout navigationDrawer;
-    ImageView deleteButton;
+    ImageView clearHistoryButton;
     TextView nothingToShowTv;
     ListView historyList;
+    ActionBarDrawerToggle drawerToggle;
+
 
     // Map Elements
     private GoogleMap mMap;
     Marker sourceMarker, destinationMarker;
     Polyline distanceLine;
     boolean placeDestinationMarkerOnMap = false, placeSourceMarkerOnMap = false;
-
     Geocoder geocoder;
     LocationCallback locationCallback = null;
-    InputMethodManager imm;
-    TextWatcher sourceTextWatcher, destinationTextWatcher;
+
 
     int MY_PERMISSIONS_REQUEST_LOCATION = 123;
 
-    Toast gpsToast;
+    InputMethodManager imm;
+    Toast gpsToast, noInternetToast;
 
-    // database
-    private SQLiteHelper dbHelper;
-    private SQLiteDatabase db;
-    SimpleCursorAdapter adapter;
-    Cursor cursor;
 
-    // history
-    private HistoryDbHelper dbHelperHist;
-    private SQLiteDatabase dbHist;
-    HistoryAdapter adapterHist;
-    Cursor cursorHist;
+    // suggestion db
+    private SuggestionDbHelper suggestionDbHelper;
+    private SQLiteDatabase suggestionDb;
+    SimpleCursorAdapter suggestionAdapter;
+    Cursor suggestionCursor;
+
+
+    // history db
+    private HistoryDbHelper historyDbHelper;
+    private SQLiteDatabase historyDb;
+    HistoryAdapter historyAdapter;
+    Cursor historyCursor;
 
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        // make activity full screen - no status bar
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
                 WindowManager.LayoutParams.FLAG_FULLSCREEN);
@@ -164,7 +171,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     @Override
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
-
 
         // Initialize source marker, destination marker & distance line
         sourceMarker = mMap.addMarker(new MarkerOptions()
@@ -247,6 +253,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
 
     // initialize
+    @SuppressLint("ShowToast")
     public void initialize() {
         initializeWidgets();
 
@@ -258,71 +265,73 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         gpsToast = Toast.makeText(this, "Please turn on GPS", Toast.LENGTH_LONG);
         gpsToast.setGravity(Gravity.CENTER, 0, 0);
 
+        noInternetToast = Toast.makeText(this, "No Internet Connection", Toast.LENGTH_SHORT);
+        noInternetToast.setGravity(Gravity.CENTER, 0, 0);
+
         drawerToggle = new ActionBarDrawerToggle(this, drawerLayout,
                 R.string.drawer_open, R.string.drawer_close);
         drawerLayout.addDrawerListener(drawerToggle);
 
-        initializeDbElements();
-        initializeHistDbElements();
+        initializeSuggestionDbElements();
+        initializeHistoryDbElements();
     }
 
-    public void initializeDbElements() {
-        dbHelper = new SQLiteHelper(this);
+    public void initializeSuggestionDbElements() {
+        suggestionDbHelper = new SuggestionDbHelper(this);
         try {
-            db = dbHelper.getReadableDatabase();
+            suggestionDb = suggestionDbHelper.getReadableDatabase();
+            suggestionCursor = suggestionDbHelper.search(suggestionDb, "");
 
-            cursor = dbHelper.search(db, "");
+            suggestionAdapter = new SimpleCursorAdapter(this, R.layout.suggestion_list_layout,
+                    suggestionCursor, new String[]{"NAME"}, new int[]{R.id.text});
 
-            adapter = new SimpleCursorAdapter(this, R.layout.suggestion_list_layout,
-                    cursor, new String[]{"NAME"}, new int[]{R.id.text});
-
-            adapter.setCursorToStringConverter(new SimpleCursorAdapter.CursorToStringConverter() {
+            suggestionAdapter.setCursorToStringConverter(new SimpleCursorAdapter.CursorToStringConverter() {
                 @Override
                 public CharSequence convertToString(Cursor cursor) {
-                    return cursor.getString(1);
+                    return cursor.getString(cursor.getColumnIndex("NAME"));
                 }
             });
 
-            adapter.setFilterQueryProvider(new FilterQueryProvider() {
+            suggestionAdapter.setFilterQueryProvider(new FilterQueryProvider() {
                 @Override
                 public Cursor runQuery(CharSequence charSequence) {
-                    if (db != null) {
-                        cursor = dbHelper.search(db, charSequence.toString());
+                    if (suggestionDb != null) {
+                        suggestionCursor = suggestionDbHelper.search(suggestionDb, charSequence.toString());
                     }
-                    return cursor;
+                    return suggestionCursor;
                 }
             });
 
-            sourceInputEditText.setAdapter(adapter);
+            sourceInputEditText.setAdapter(suggestionAdapter);
             sourceInputEditText.setThreshold(1);
 
-            destinationInputEditText.setAdapter(adapter);
+            destinationInputEditText.setAdapter(suggestionAdapter);
             destinationInputEditText.setThreshold(1);
         } catch (Exception e) {
-            db = null;
+            suggestionDb = null;
             Log.d("KashewDevelopers", "Error : " + e.getMessage());
         }
     }
 
-    public void initializeHistDbElements() {
-        dbHelperHist = new HistoryDbHelper(this);
+    public void initializeHistoryDbElements() {
+        historyDbHelper = new HistoryDbHelper(this);
         try {
-            dbHist = dbHelperHist.getReadableDatabase();
+            historyDb = historyDbHelper.getReadableDatabase();
+            historyCursor = historyDbHelper.get(historyDb);
 
-            cursorHist = dbHelperHist.get(dbHist);
+            historyAdapter = new HistoryAdapter(this, historyCursor, 0);
 
-            adapterHist = new HistoryAdapter(this, cursorHist, 0);
+            historyList.setAdapter(historyAdapter);
 
-            historyList.setAdapter(adapterHist);
-
-            if (cursorHist.getCount() == 0) {
+            if (historyCursor.getCount() == 0) {
                 nothingToShowTv.setVisibility(View.VISIBLE);
+                clearHistoryButton.setVisibility(View.GONE);
             } else {
                 nothingToShowTv.setVisibility(View.GONE);
+                clearHistoryButton.setVisibility(View.VISIBLE);
             }
-
         } catch (Exception e) {
-            dbHist = null;
+            historyDb = null;
             Log.d("KashewDevelopers", "Error : " + e.getMessage());
         }
     }
@@ -358,7 +367,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         // navigation drawer
         drawerLayout = findViewById(R.id.drawerLayout);
         navigationDrawer = findViewById(R.id.slider);
-        deleteButton = findViewById(R.id.clear_history_image);
+        clearHistoryButton = findViewById(R.id.clear_history);
         nothingToShowTv = findViewById(R.id.nothing_to_show);
         historyList = findViewById(R.id.history_list);
     }
@@ -437,7 +446,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
             @Override
             public void afterTextChanged(final Editable editable) {
-                if (!isNetworkConnected()) {
+                noInternetToast.cancel();
+                if (noNetworkConnection()) {
+                    noInternetToast.show();
                     return;
                 }
 
@@ -472,7 +483,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
             @Override
             public void afterTextChanged(final Editable editable) {
-                if (!isNetworkConnected()) {
+                noInternetToast.cancel();
+                if (noNetworkConnection()) {
+                    noInternetToast.show();
                     return;
                 }
 
@@ -566,7 +579,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     public void setHistoryClickListener() {
         // show history on map
-        adapterHist.setOnHistoryClickListener(new HistoryAdapter.OnHistoryClickListener() {
+        historyAdapter.setOnHistoryClickListener(new HistoryAdapter.OnHistoryClickListener() {
             @Override
             public void onHistoryClickListener(View view) {
                 String srcName = ((TextView) (view.findViewById(R.id.src))).getText().toString();
@@ -586,7 +599,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         });
 
         // delete individual history
-        adapterHist.setOnDeleteClickListener(new HistoryAdapter.OnDeleteClickListener() {
+        historyAdapter.setOnDeleteClickListener(new HistoryAdapter.OnDeleteClickListener() {
             @Override
             public void onDeleteClickListener(final String hashCode) {
                 AlertDialog.Builder builder = new AlertDialog.Builder(MapsActivity.this);
@@ -596,17 +609,17 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 builder.setPositiveButton(R.string.delete, new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialogInterface, int i) {
-                        dbHelperHist.delete(dbHist, hashCode);
+                        historyDbHelper.delete(historyDb, hashCode);
 
-                        cursorHist = dbHelperHist.get(dbHist);
-                        adapterHist.swapCursor(cursorHist);
-                        adapterHist.notifyDataSetChanged();
-                        if (cursorHist.getCount() == 0) {
+                        historyCursor = historyDbHelper.get(historyDb);
+                        historyAdapter.swapCursor(historyCursor);
+                        historyAdapter.notifyDataSetChanged();
+                        if (historyCursor.getCount() == 0) {
                             nothingToShowTv.setVisibility(View.VISIBLE);
-                            deleteButton.setVisibility(View.GONE);
+                            clearHistoryButton.setVisibility(View.GONE);
                         } else {
                             nothingToShowTv.setVisibility(View.GONE);
-                            deleteButton.setVisibility(View.VISIBLE);
+                            clearHistoryButton.setVisibility(View.VISIBLE);
                         }
                     }
                 });
@@ -629,9 +642,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                         address.getLatitude(), address.getLongitude());
             }
         } catch (Exception e) {
-            Log.d("KashewDevelopers",
-                    "sourceInputEditText onDataChange, afterTextChanged : " +
-                            e.getMessage());
+            Log.d("KashewDevelopers", "Error : " + e.getMessage());
         }
         return null;
     }
@@ -655,11 +666,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     // set marker
     private void setSourceMarker(final LocationObject locationObject) {
-
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-
                 if (sourceInputEditText.getText().length() > 0) {
                     clearSource.setVisibility(View.VISIBLE);
                 } else {
@@ -696,11 +705,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
     private void setDestinationMarker(final LocationObject locationObject) {
-
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-
                 if (destinationInputEditText.getText().length() > 0) {
                     clearDestination.setVisibility(View.VISIBLE);
                 } else {
@@ -738,24 +745,21 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     private void setHistoryMarkers(String srcName, String srcLL, String dstName, String dstLL) {
         sourceInputEditText.removeTextChangedListener(sourceTextWatcher);
-        sourceInputEditText.setText("");
+        sourceInputEditText.setText(srcName.equals("Source") ? "" : srcName);
         sourceInputEditText.addTextChangedListener(sourceTextWatcher);
         sourceMarker.setVisible(false);
-
-        destinationInputEditText.removeTextChangedListener(destinationTextWatcher);
-        destinationInputEditText.setText("");
-        destinationInputEditText.addTextChangedListener(destinationTextWatcher);
-        destinationMarker.setVisible(false);
-
-        if (controlPanel.getVisibility() == View.VISIBLE) {
-            controlToggleButton.performClick();
-        }
 
         String[] srcLaLn = srcLL.split(",");
         double sourceLat = Double.parseDouble(srcLaLn[0]);
         double sourceLng = Double.parseDouble(srcLaLn[1]);
         LocationObject source = new LocationObject(srcName, sourceLat, sourceLng);
         setSourceMarker(source);
+
+
+        destinationInputEditText.removeTextChangedListener(destinationTextWatcher);
+        destinationInputEditText.setText(dstName.equals("Destination") ? "" : dstName);
+        destinationInputEditText.addTextChangedListener(destinationTextWatcher);
+        destinationMarker.setVisible(false);
 
         String[] dstLaLn = dstLL.split(",");
         double destinationLat = Double.parseDouble(dstLaLn[0]);
@@ -768,14 +772,14 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
 
     // network, gps & permission
-    public boolean isNetworkConnected() {
+    public boolean noNetworkConnection() {
         ConnectivityManager cm =
                 (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
 
         if (cm == null)
             return true;
 
-        return cm.getActiveNetworkInfo() != null && cm.getActiveNetworkInfo().isConnected();
+        return cm.getActiveNetworkInfo() == null || !cm.getActiveNetworkInfo().isConnected();
     }
 
     private boolean hasLocationPermission() {
@@ -820,7 +824,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
     private void getLocationAndSetMarker(final String markerType) {
-
         final FusedLocationProviderClient mFusedLocationClient =
                 LocationServices.getFusedLocationProviderClient(this);
 
@@ -855,12 +858,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                                 currentLocation.getLatitude(),
                                 currentLocation.getLongitude()));
                 }
-
             }
         };
-
         mFusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, Looper.myLooper());
-
     }
 
 
@@ -908,10 +908,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             distanceUnitButton.setImageResource(R.drawable.km_icon);
             if (distanceInKm < 1) {
                 distance = distanceInKm * 1000;
-                if (distance > 1)
-                    unit = "Meters";
-                else
-                    unit = "Meter";
+                unit = (distance > 1) ? "Meters" : "Meter";
             } else {
                 distance = distanceInKm;
             }
@@ -920,10 +917,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             distance = distanceInKm * 0.62;
             if (distance < 1) {
                 distance = distance * 1760;
-                if (distance > 1)
-                    unit = "Yards";
-                else
-                    unit = "Yard";
+                unit = (distance > 1) ? "Yards" : "Yard";
             }
         }
 
@@ -964,13 +958,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
     public void writePlaceToDB(String place) {
-        if (dbHelper != null && db != null) {
-            dbHelper.insert(db, place);
+        if (suggestionDbHelper != null && suggestionDb != null) {
+            suggestionDbHelper.insert(suggestionDb, place);
         }
     }
 
     public void insertHistory() {
-        if (dbHelperHist == null || dbHist == null)
+        if (historyDbHelper == null || historyDb == null)
             return;
 
         String srcName = sourceMarker.getTitle();
@@ -989,15 +983,17 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         String distance = distanceMsg.getText().toString();
 
-        dbHelperHist.insert(dbHist, srcName, srcLL, dstName, dstLL, distance);
-        cursorHist = dbHelperHist.get(dbHist);
-        adapterHist.swapCursor(cursorHist);
-        adapterHist.notifyDataSetChanged();
+        historyDbHelper.insert(historyDb, srcName, srcLL, dstName, dstLL, distance);
+        historyCursor = historyDbHelper.get(historyDb);
+        historyAdapter.swapCursor(historyCursor);
+        historyAdapter.notifyDataSetChanged();
 
-        if (cursorHist.getCount() == 0) {
+        if (historyCursor.getCount() == 0) {
             nothingToShowTv.setVisibility(View.VISIBLE);
+            clearHistoryButton.setVisibility(View.GONE);
         } else {
             nothingToShowTv.setVisibility(View.GONE);
+            clearHistoryButton.setVisibility(View.VISIBLE);
         }
     }
 
@@ -1029,12 +1025,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         builder.show();
     }
 
-    public void openDrawer(View v) {
+    public void openHistoryClicked(View v) {
         drawerLayout.openDrawer(GravityCompat.START);
     }
 
-    public void deleteHistoryButton(View v) {
-        if (dbHelperHist == null || dbHist == null) {
+    public void clearHistoryButtonClicked(View v) {
+        if (historyDbHelper == null || historyDb == null) {
             return;
         }
 
@@ -1044,11 +1040,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         builder.setPositiveButton(R.string.delete, new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialogInterface, int i) {
-                dbHelperHist.deleteAll(dbHist);
+                historyDbHelper.deleteAll(historyDb);
 
-                cursorHist = dbHelperHist.get(dbHist);
-                adapterHist.swapCursor(cursorHist);
-                adapterHist.notifyDataSetChanged();
+                historyCursor = historyDbHelper.get(historyDb);
+                historyAdapter.swapCursor(historyCursor);
+                historyAdapter.notifyDataSetChanged();
                 nothingToShowTv.setVisibility(View.VISIBLE);
             }
         });
