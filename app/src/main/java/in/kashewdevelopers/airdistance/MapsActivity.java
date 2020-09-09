@@ -26,7 +26,6 @@ import android.location.Address;
 import android.location.Geocoder;
 import android.location.Location;
 import android.location.LocationManager;
-import android.net.ConnectivityManager;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Looper;
@@ -104,7 +103,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     int MY_PERMISSIONS_REQUEST_LOCATION = 123;
 
     InputMethodManager imm;
-    Toast gpsToast, noInternetToast;
+    Toast gpsToast;
 
 
     // suggestion db
@@ -264,9 +263,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         gpsToast = Toast.makeText(this, "Please turn on GPS", Toast.LENGTH_LONG);
         gpsToast.setGravity(Gravity.CENTER, 0, 0);
-
-        noInternetToast = Toast.makeText(this, "No Internet Connection", Toast.LENGTH_SHORT);
-        noInternetToast.setGravity(Gravity.CENTER, 0, 0);
 
         drawerToggle = new ActionBarDrawerToggle(this, drawerLayout,
                 R.string.drawer_open, R.string.drawer_close);
@@ -446,12 +442,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
             @Override
             public void afterTextChanged(final Editable editable) {
-                noInternetToast.cancel();
-                if (noNetworkConnection()) {
-                    noInternetToast.show();
-                    return;
-                }
-
                 sourceProgressBar.setVisibility(View.VISIBLE);
                 clearSource.setVisibility(View.GONE);
                 sourceNotFound.setVisibility(View.GONE);
@@ -483,12 +473,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
             @Override
             public void afterTextChanged(final Editable editable) {
-                noInternetToast.cancel();
-                if (noNetworkConnection()) {
-                    noInternetToast.show();
-                    return;
-                }
-
                 destinationProgressBar.setVisibility(View.VISIBLE);
                 clearDestination.setVisibility(View.GONE);
                 destinationNotFound.setVisibility(View.GONE);
@@ -744,10 +728,15 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
     private void setHistoryMarkers(String srcName, String srcLL, String dstName, String dstLL) {
+        sourceMarker.setVisible(false);
+        destinationMarker.setVisible(false);
+
+        placeSourceMarkerOnMap = false;
+        placeDestinationMarkerOnMap = true;
+
         sourceInputEditText.removeTextChangedListener(sourceTextWatcher);
         sourceInputEditText.setText(srcName.equals("Source") ? "" : srcName);
         sourceInputEditText.addTextChangedListener(sourceTextWatcher);
-        sourceMarker.setVisible(false);
 
         String[] srcLaLn = srcLL.split(",");
         double sourceLat = Double.parseDouble(srcLaLn[0]);
@@ -759,7 +748,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         destinationInputEditText.removeTextChangedListener(destinationTextWatcher);
         destinationInputEditText.setText(dstName.equals("Destination") ? "" : dstName);
         destinationInputEditText.addTextChangedListener(destinationTextWatcher);
-        destinationMarker.setVisible(false);
 
         String[] dstLaLn = dstLL.split(",");
         double destinationLat = Double.parseDouble(dstLaLn[0]);
@@ -768,20 +756,16 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         setDestinationMarker(destination);
 
         drawerLayout.closeDrawer(GravityCompat.START);
+
+        placeSourceMarkerOnMap = placeDestinationMarkerOnMap = false;
+        mMap.animateCamera(CameraUpdateFactory.zoomTo(0));
+
+        if (controlPanel.getVisibility() == View.VISIBLE)
+            controlToggleButton.performClick();
     }
 
 
-    // network, gps & permission
-    public boolean noNetworkConnection() {
-        ConnectivityManager cm =
-                (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
-
-        if (cm == null)
-            return true;
-
-        return cm.getActiveNetworkInfo() == null || !cm.getActiveNetworkInfo().isConnected();
-    }
-
+    // gps & permission
     private boolean hasLocationPermission() {
         return ContextCompat
                 .checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) ==
