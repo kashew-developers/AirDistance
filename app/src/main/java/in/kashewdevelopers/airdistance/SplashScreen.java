@@ -23,76 +23,25 @@ public class SplashScreen extends AppCompatActivity {
 
         marker = findViewById(R.id.marker);
         markerPath = findViewById(R.id.markerPath);
+        markerPath.setVisibility(View.INVISIBLE);
         appName = findViewById(R.id.appName);
+        appName.setVisibility(View.INVISIBLE);
 
-        animateMarker();
+        Animation animation = AnimationUtils.loadAnimation(this, R.anim.animate_marker);
+        marker.startAnimation(animation);
 
+        animation = AnimationUtils.loadAnimation(this, R.anim.animate_path);
+        markerPath.startAnimation(animation);
+
+        animation = AnimationUtils.loadAnimation(this, R.anim.animate_path);
+        appName.startAnimation(animation);
+
+        new Handler().postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                startActivity(new Intent(SplashScreen.this, MapsActivity.class));
+            }
+        }, 2000);
     }
-
-    public void animateMarker() {
-
-        Animation markerAnimation = AnimationUtils
-                .loadAnimation(getApplicationContext(), R.anim.fade_in_translate);
-        markerAnimation.setFillAfter(true);
-
-        marker.startAnimation(markerAnimation);
-        markerPath.startAnimation(markerAnimation);
-
-        markerAnimation.setAnimationListener(new Animation.AnimationListener() {
-            @Override
-            public void onAnimationStart(Animation animation) {
-            }
-
-            @Override
-            public void onAnimationEnd(Animation animation) {
-                new Handler().postDelayed(new Runnable() {
-                    @Override
-                    public void run() {
-                        animatePath();
-                    }
-                }, 200);
-            }
-
-            @Override
-            public void onAnimationRepeat(Animation animation) {
-            }
-        });
-
-    }
-
-
-    public void animatePath() {
-
-        Animation pathAnimation = AnimationUtils
-                .loadAnimation(getApplicationContext(), R.anim.fade_in);
-        pathAnimation.setFillAfter(true);
-
-        appName.setVisibility(View.VISIBLE);
-        markerPath.setVisibility(View.VISIBLE);
-        markerPath.startAnimation(pathAnimation);
-        appName.startAnimation(pathAnimation);
-
-        pathAnimation.setAnimationListener(new Animation.AnimationListener() {
-            @Override
-            public void onAnimationStart(Animation animation) {
-            }
-
-            @Override
-            public void onAnimationEnd(Animation animation) {
-                new Handler().postDelayed(new Runnable() {
-                    @Override
-                    public void run() {
-                        startActivity(new Intent(SplashScreen.this, MapsActivity.class));
-                    }
-                }, 200);
-            }
-
-            @Override
-            public void onAnimationRepeat(Animation animation) {
-            }
-        });
-
-    }
-
 
 }
