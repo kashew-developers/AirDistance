@@ -35,10 +35,9 @@ import android.text.TextWatcher;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.View;
-import android.view.Window;
-import android.view.WindowManager;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.AutoCompleteTextView;
+import android.widget.CursorAdapter;
 import android.widget.FilterQueryProvider;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -48,6 +47,11 @@ import android.widget.SimpleCursorAdapter;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.google.android.gms.ads.AdRequest;
+import com.google.android.gms.ads.AdView;
+import com.google.android.gms.ads.MobileAds;
+import com.google.android.gms.ads.initialization.InitializationStatus;
+import com.google.android.gms.ads.initialization.OnInitializationCompleteListener;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationCallback;
 import com.google.android.gms.location.LocationRequest;
@@ -65,12 +69,13 @@ import com.google.android.gms.maps.model.PolylineOptions;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
 import java.util.List;
+import java.util.Random;
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
 
     // Widgets
-    private FloatingActionButton controlToggleButton, distanceUnitButton;
-    private LinearLayout controlPanel;
+    FloatingActionButton controlToggleButton, distanceUnitButton;
+    LinearLayout controlPanel;
     ProgressBar sourceProgressBar, destinationProgressBar;
     ConstraintLayout sourcePanel, destinationPanel;
     AutoCompleteTextView sourceInputEditText, destinationInputEditText;
@@ -81,7 +86,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     TextView tapOnMapMsg, distanceMsg;
     TextWatcher sourceTextWatcher, destinationTextWatcher;
 
-
     // Navigation Drawer UI
     DrawerLayout drawerLayout;
     ConstraintLayout navigationDrawer;
@@ -89,7 +93,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     TextView nothingToShowTv;
     ListView historyList;
     ActionBarDrawerToggle drawerToggle;
-
 
     // Map Elements
     private GoogleMap mMap;
@@ -99,19 +102,18 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     Geocoder geocoder;
     LocationCallback locationCallback = null;
 
-
+    // constants
     int MY_PERMISSIONS_REQUEST_LOCATION = 123;
+    long fadeInDuration = 200, fadeOutDuration = 200;
 
     InputMethodManager imm;
     Toast gpsToast;
-
 
     // suggestion db
     private SuggestionDbHelper suggestionDbHelper;
     private SQLiteDatabase suggestionDb;
     SimpleCursorAdapter suggestionAdapter;
     Cursor suggestionCursor;
-
 
     // history db
     private HistoryDbHelper historyDbHelper;
@@ -123,11 +125,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
-        // make activity full screen - no status bar
-        requestWindowFeature(Window.FEATURE_NO_TITLE);
-        getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
-                WindowManager.LayoutParams.FLAG_FULLSCREEN);
         setContentView(R.layout.activity_maps);
 
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
@@ -136,8 +133,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         if (mapFragment != null)
             mapFragment.getMapAsync(this);
 
-
         initialize();
+        manageAds();
 
         controlToggleButton.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -148,16 +145,14 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 animateAndChangeControlToggle();
 
                 if (controlPanel.getVisibility() == View.GONE) {
-                    controlPanel.setVisibility(View.VISIBLE);
+                    fadeInView(controlPanel);
                 } else {
-                    controlPanel.setVisibility(View.GONE);
+                    fadeOutView(controlPanel);
                     disableMarkerPlacement();
                 }
             }
         });
-
         controlToggleButton.performClick();
-
 
         // set listeners
         setFocusChangeListeners();
@@ -279,7 +274,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             suggestionCursor = suggestionDbHelper.search(suggestionDb, "");
 
             suggestionAdapter = new SimpleCursorAdapter(this, R.layout.suggestion_list_layout,
-                    suggestionCursor, new String[]{"NAME"}, new int[]{R.id.text});
+                    suggestionCursor, new String[]{"NAME"}, new int[]{R.id.text},
+                    CursorAdapter.FLAG_REGISTER_CONTENT_OBSERVER);
 
             suggestionAdapter.setCursorToStringConverter(new SimpleCursorAdapter.CursorToStringConverter() {
                 @Override
@@ -316,7 +312,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             historyCursor = historyDbHelper.get(historyDb);
 
             historyAdapter = new HistoryAdapter(this, historyCursor, 0);
-
             historyList.setAdapter(historyAdapter);
 
             if (historyCursor.getCount() == 0) {
@@ -386,6 +381,43 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         distanceMsg.setVisibility(View.GONE);
         tapOnMapMsg.setVisibility(View.GONE);
+    }
+
+
+    // UI changes
+    public void fadeInView(View v) {
+        v.setVisibility(View.VISIBLE);
+        v.animate().alpha(1.0f).setDuration(fadeInDuration);
+    }
+
+    public void fadeOutView(final View v) {
+        v.animate()
+                .alpha(0.0f)
+                .setDuration(fadeOutDuration)
+                .withEndAction(new Runnable() {
+                    @Override
+                    public void run() {
+                        v.setVisibility(View.GONE);
+                    }
+                });
+    }
+
+    public void animateAndChangeControlToggle() {
+        final int newIcon = (controlPanel.getVisibility() == View.GONE) ?
+                R.drawable.close_icon :
+                R.drawable.keyboard_icon;
+
+        final float angle = (controlPanel.getVisibility() == View.GONE) ? 180f : 0f;
+
+        controlToggleButton.animate().setDuration(200)
+                .setListener(new AnimatorListenerAdapter() {
+                    @Override
+                    public void onAnimationEnd(Animator animation) {
+                        super.onAnimationEnd(animation);
+                        controlToggleButton.setImageResource(newIcon);
+                    }
+                })
+                .rotation(angle);
     }
 
 
@@ -844,7 +876,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 }
             }
         };
-        mFusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, Looper.myLooper());
+
+        try {
+            mFusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, Looper.myLooper());
+        } catch (SecurityException e) {
+            Log.d("KashewDevelopers", "getLocationAndSetMarker: " + e.getMessage());
+        }
     }
 
 
@@ -911,6 +948,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         distanceUnitButton.setVisibility(View.VISIBLE);
     }
 
+
+    // shared preference
     public String getUnitPreference() {
         SharedPreferences prefs = getSharedPreferences("distanceUnit", MODE_PRIVATE);
         return prefs.getString("unit", "Km");
@@ -923,24 +962,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         editor.apply();
     }
 
-    public void animateAndChangeControlToggle() {
-        final int newIcon = (controlPanel.getVisibility() == View.GONE) ?
-                R.drawable.close_icon :
-                R.drawable.keyboard_icon;
 
-        final float angle = (controlPanel.getVisibility() == View.GONE) ? 180f : 0f;
-
-        controlToggleButton.animate().setDuration(200)
-                .setListener(new AnimatorListenerAdapter() {
-                    @Override
-                    public void onAnimationEnd(Animator animation) {
-                        super.onAnimationEnd(animation);
-                        controlToggleButton.setImageResource(newIcon);
-                    }
-                })
-                .rotation(angle);
-    }
-
+    // db operations
     public void writePlaceToDB(String place) {
         if (suggestionDbHelper != null && suggestionDb != null) {
             suggestionDbHelper.insert(suggestionDb, place);
@@ -1034,6 +1057,20 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         });
         builder.setNegativeButton(R.string.cancel, null);
         builder.show();
+    }
+
+
+    public void manageAds() {
+        Random randomGen = new Random();
+        if (randomGen.nextBoolean() && randomGen.nextBoolean()) {
+            MobileAds.initialize(this, new OnInitializationCompleteListener() {
+                @Override
+                public void onInitializationComplete(InitializationStatus initializationStatus) {
+                    AdView adView = findViewById(R.id.adView);
+                    adView.loadAd(new AdRequest.Builder().build());
+                }
+            });
+        }
     }
 
 }
