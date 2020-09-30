@@ -24,4 +24,11 @@
     <string name="cancel">Cancel</string>
     <string name="are_you_sure">Are you sure?</string>
 
+
+    <string name="location_permission_title">Location Permission Needed</string>
+    <string name="location_permission_message">To select your location, allow AirDistance access
+        to your location.\n\nSettings > Permission > Turn On Location permission.</string>
+    <string name="settings">Settings</string>
+    <string name="not_now">Not Now</string>
+
 </resources>

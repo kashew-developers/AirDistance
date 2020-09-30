@@ -8,33 +8,30 @@ import android.os.Handler;
 import android.view.View;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
-import android.widget.ImageView;
-import android.widget.TextView;
+
+import in.kashewdevelopers.airdistance.databinding.ActivitySplashScreenBinding;
 
 public class SplashScreen extends AppCompatActivity {
 
-    ImageView marker, markerPath;
-    TextView appName;
+    ActivitySplashScreenBinding binding;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_splash_screen);
+        binding = ActivitySplashScreenBinding.inflate(getLayoutInflater());
+        setContentView(binding.getRoot());
 
-        marker = findViewById(R.id.marker);
-        markerPath = findViewById(R.id.markerPath);
-        markerPath.setVisibility(View.INVISIBLE);
-        appName = findViewById(R.id.appName);
-        appName.setVisibility(View.INVISIBLE);
+        binding.markerPath.setVisibility(View.INVISIBLE);
+        binding.appName.setVisibility(View.INVISIBLE);
 
         Animation animation = AnimationUtils.loadAnimation(this, R.anim.animate_marker);
-        marker.startAnimation(animation);
+        binding.marker.startAnimation(animation);
 
         animation = AnimationUtils.loadAnimation(this, R.anim.animate_path);
-        markerPath.startAnimation(animation);
+        binding.markerPath.startAnimation(animation);
 
         animation = AnimationUtils.loadAnimation(this, R.anim.animate_path);
-        appName.startAnimation(animation);
+        binding.appName.startAnimation(animation);
 
         new Handler().postDelayed(new Runnable() {
             @Override

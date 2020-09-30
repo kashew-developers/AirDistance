@@ -22,9 +22,9 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
-        <!-- controls panel -->
+        <!-- control panel -->
         <LinearLayout
-            android:id="@+id/controlsPanel"
+            android:id="@+id/controlPanel"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:orientation="vertical"
@@ -92,7 +92,7 @@
 
                 <TextView
                     android:id="@+id/sourceNotFound"
-                    android:layout_width="wrap_content"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:text="@string/place_not_found"
                     android:textSize="12sp"
@@ -117,6 +117,7 @@
                     android:drawableStart="@drawable/location_icon"
                     android:drawablePadding="5dp"
                     android:focusable="true"
+                    android:onClick="useSourceLocationClicked"
                     android:text="@string/use_location"
                     android:textColor="#000000"
                     android:textSize="18sp"
@@ -135,6 +136,7 @@
                     android:drawableStart="@drawable/marker_icon"
                     android:drawablePadding="5dp"
                     android:focusable="true"
+                    android:onClick="chooseSourceOnMapClicked"
                     android:text="@string/choose_map"
                     android:textColor="#000000"
                     android:textSize="18sp"
@@ -230,6 +232,7 @@
                     android:drawableStart="@drawable/location_icon"
                     android:drawablePadding="5dp"
                     android:focusable="true"
+                    android:onClick="useDestinationLocationClicked"
                     android:text="@string/use_location"
                     android:textColor="#000000"
                     android:textSize="18sp"
@@ -248,6 +251,7 @@
                     android:drawableStart="@drawable/marker_icon"
                     android:drawablePadding="5dp"
                     android:focusable="true"
+                    android:onClick="chooseDestinationOnMapClicked"
                     android:text="@string/choose_map"
                     android:textColor="#000000"
                     android:textSize="18sp"
@@ -267,7 +271,9 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="50dp"
             android:layout_marginEnd="20dp"
-            android:src="@drawable/keyboard_icon"
+            android:onClick="controlToggleClicked"
+            android:rotation="180"
+            android:src="@drawable/close_icon"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
@@ -290,7 +296,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             app:barrierDirection="bottom"
-            app:constraint_referenced_ids="distanceUnitButton,controlsPanel" />
+            app:constraint_referenced_ids="distanceUnitButton,controlPanel" />
 
         <TextView
             android:id="@+id/distanceMsg"
@@ -321,6 +327,16 @@
             app:layout_constraintStart_toStartOf="parent"
             app:maxImageSize="20dp" />
 
+        <com.google.android.gms.ads.AdView xmlns:ads="http://schemas.android.com/apk/res-auto"
+            android:id="@+id/adView"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            ads:adSize="BANNER"
+            ads:adUnitId="@string/bottom_ad_id"
+            ads:layout_constraintBottom_toTopOf="@id/tapOnMapMsg"
+            ads:layout_constraintEnd_toEndOf="parent"
+            ads:layout_constraintStart_toStartOf="parent" />
+
         <TextView
             android:id="@+id/tapOnMapMsg"
             android:layout_width="match_parent"
@@ -332,19 +348,9 @@
             android:textColor="#ffffff"
             android:textSize="15sp"
             android:textStyle="bold"
-            app:layout_constraintBottom_toTopOf="@id/adView"
+            app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent" />
-
-        <com.google.android.gms.ads.AdView xmlns:ads="http://schemas.android.com/apk/res-auto"
-            android:id="@+id/adView"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            ads:adSize="BANNER"
-            ads:adUnitId="@string/bottom_ad_id"
-            ads:layout_constraintBottom_toBottomOf="parent"
-            ads:layout_constraintEnd_toEndOf="parent"
-            ads:layout_constraintStart_toStartOf="parent" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
@@ -356,7 +362,7 @@
         android:background="@android:color/white">
 
         <TextView
-            android:id="@+id/history_label"
+            android:id="@+id/historyLabel"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginStart="10dp"
@@ -369,7 +375,7 @@
             app:layout_constraintTop_toTopOf="parent" />
 
         <ImageView
-            android:id="@+id/clear_history"
+            android:id="@+id/clearHistory"
             android:layout_width="30dp"
             android:layout_height="0dp"
             android:layout_marginEnd="10dp"
@@ -380,16 +386,16 @@
             android:onClick="clearHistoryButtonClicked"
             android:src="@drawable/delete_icon"
             android:tint="@android:color/darker_gray"
-            app:layout_constraintBottom_toBottomOf="@id/history_label"
+            app:layout_constraintBottom_toBottomOf="@id/historyLabel"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="@id/history_label" />
+            app:layout_constraintTop_toTopOf="@id/historyLabel" />
 
         <androidx.constraintlayout.widget.Barrier
             android:id="@+id/headerSep"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             app:barrierDirection="bottom"
-            app:constraint_referenced_ids="history_label,clear_history" />
+            app:constraint_referenced_ids="historyLabel,clearHistory" />
 
         <TextView
             android:id="@+id/borderLine"
@@ -404,7 +410,7 @@
             app:layout_constraintTop_toBottomOf="@id/headerSep" />
 
         <ListView
-            android:id="@+id/history_list"
+            android:id="@+id/historyList"
             android:layout_width="match_parent"
             android:layout_height="0dp"
             app:layout_constraintBottom_toBottomOf="parent"
@@ -414,7 +420,7 @@
             app:layout_constraintVertical_bias="0.0" />
 
         <TextView
-            android:id="@+id/nothing_to_show"
+            android:id="@+id/nothingToShow"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:gravity="center"
@@ -424,7 +430,7 @@
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/history_label" />
+            app:layout_constraintTop_toBottomOf="@id/historyLabel" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 

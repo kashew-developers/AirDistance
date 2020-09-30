@@ -2,16 +2,12 @@ package in.kashewdevelopers.airdistance;
 
 import androidx.appcompat.app.ActionBarDrawerToggle;
 import androidx.appcompat.app.AlertDialog;
-import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.view.GravityCompat;
-import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.fragment.app.FragmentActivity;
 
 import android.Manifest;
-import android.animation.Animator;
-import android.animation.AnimatorListenerAdapter;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
@@ -22,8 +18,6 @@ import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.graphics.Color;
-import android.location.Address;
-import android.location.Geocoder;
 import android.location.Location;
 import android.location.LocationManager;
 import android.net.Uri;
@@ -36,22 +30,14 @@ import android.util.Log;
 import android.view.Gravity;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
-import android.widget.AutoCompleteTextView;
 import android.widget.CursorAdapter;
 import android.widget.FilterQueryProvider;
-import android.widget.ImageView;
-import android.widget.LinearLayout;
-import android.widget.ListView;
-import android.widget.ProgressBar;
 import android.widget.SimpleCursorAdapter;
-import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.android.gms.ads.AdRequest;
 import com.google.android.gms.ads.AdView;
 import com.google.android.gms.ads.MobileAds;
-import com.google.android.gms.ads.initialization.InitializationStatus;
-import com.google.android.gms.ads.initialization.OnInitializationCompleteListener;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationCallback;
 import com.google.android.gms.location.LocationRequest;
@@ -66,40 +52,26 @@ import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
-import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
-import java.util.List;
 import java.util.Random;
+
+import in.kashewdevelopers.airdistance.databinding.ActivityMapsBinding;
+import in.kashewdevelopers.airdistance.databinding.HistoryListItemBinding;
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
 
-    // Widgets
-    FloatingActionButton controlToggleButton, distanceUnitButton;
-    LinearLayout controlPanel;
-    ProgressBar sourceProgressBar, destinationProgressBar;
-    ConstraintLayout sourcePanel, destinationPanel;
-    AutoCompleteTextView sourceInputEditText, destinationInputEditText;
-    ImageView clearSource, clearDestination;
-    TextView sourceUseLocation, destinationUseLocation;
-    TextView sourceChooseOnMap, destinationChooseOnMap;
-    TextView sourceNotFound, destinationNotFound;
-    TextView tapOnMapMsg, distanceMsg;
-    TextWatcher sourceTextWatcher, destinationTextWatcher;
+    private ActivityMapsBinding binding;
 
-    // Navigation Drawer UI
-    DrawerLayout drawerLayout;
-    ConstraintLayout navigationDrawer;
-    ImageView clearHistoryButton;
-    TextView nothingToShowTv;
-    ListView historyList;
-    ActionBarDrawerToggle drawerToggle;
+    // Widgets helpers
+    TextWatcher sourceTextWatcher, destinationTextWatcher;
+    PlaceToLatLngTask.OnTaskCompleteListener placeTaskListener;
+    int lastSourceTaskId = 0, lastDestinationTaskId = 0;
 
     // Map Elements
     private GoogleMap mMap;
     Marker sourceMarker, destinationMarker;
     Polyline distanceLine;
-    boolean placeDestinationMarkerOnMap = false, placeSourceMarkerOnMap = false;
-    Geocoder geocoder;
+    boolean chooseDestinationOnMap = false, chooseSourceOnMap = false;
     LocationCallback locationCallback = null;
 
     // constants
@@ -125,7 +97,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_maps);
+        binding = ActivityMapsBinding.inflate(getLayoutInflater());
+        setContentView(binding.getRoot());
 
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
@@ -136,29 +109,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         initialize();
         manageAds();
 
-        controlToggleButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                sourceInputEditText.clearFocus();
-                destinationInputEditText.clearFocus();
-
-                animateAndChangeControlToggle();
-
-                if (controlPanel.getVisibility() == View.GONE) {
-                    fadeInView(controlPanel);
-                } else {
-                    fadeOutView(controlPanel);
-                    disableMarkerPlacement();
-                }
-            }
-        });
-        controlToggleButton.performClick();
-
         // set listeners
         setFocusChangeListeners();
+        setPlaceTaskListener();
         setTextChangeListeners();
-        setChooseOnMapListeners();
-        setMyLocationListeners();
         setHistoryClickListener();
     }
 
@@ -169,12 +123,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         // Initialize source marker, destination marker & distance line
         sourceMarker = mMap.addMarker(new MarkerOptions()
                 .position(new LatLng(0, 0))
-                .title("Source"));
+                .title(getString(R.string.source)));
         sourceMarker.setVisible(false);
 
         destinationMarker = mMap.addMarker(new MarkerOptions()
                 .position(sourceMarker.getPosition())
-                .title("Destination"));
+                .title(getString(R.string.destination)));
         destinationMarker.setVisible(false);
 
         distanceLine = mMap.addPolyline(new PolylineOptions()
@@ -188,14 +142,14 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         mMap.setOnMapClickListener(new GoogleMap.OnMapClickListener() {
             @Override
             public void onMapClick(LatLng latLng) {
-                if (placeDestinationMarkerOnMap) {
-                    setDestinationMarker(new LocationObject("Destination",
+                if (chooseDestinationOnMap) {
+                    setDestinationMarker(new LocationObject(getString(R.string.destination),
                             latLng.latitude, latLng.longitude));
-                } else if (placeSourceMarkerOnMap) {
-                    setSourceMarker(new LocationObject("Source",
+                } else if (chooseSourceOnMap) {
+                    setSourceMarker(new LocationObject(getString(R.string.source),
                             latLng.latitude, latLng.longitude));
-                } else if (controlPanel.getVisibility() == View.VISIBLE) {
-                    controlToggleButton.performClick();
+                } else if (binding.controlPanel.getVisibility() == View.VISIBLE) {
+                    binding.controlToggleButton.performClick();
                 }
             }
         });
@@ -213,11 +167,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
             @Override
             public void onMarkerDragEnd(Marker marker) {
-                if (placeDestinationMarkerOnMap) {
-                    setDestinationMarker(new LocationObject("Destination",
+                if (chooseDestinationOnMap) {
+                    setDestinationMarker(new LocationObject(getString(R.string.destination),
                             marker.getPosition().latitude, marker.getPosition().longitude));
-                } else if (placeSourceMarkerOnMap) {
-                    setSourceMarker(new LocationObject("Source",
+                } else if (chooseSourceOnMap) {
+                    setSourceMarker(new LocationObject(getString(R.string.source),
                             marker.getPosition().latitude, marker.getPosition().longitude));
                 }
             }
@@ -238,30 +192,26 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     @Override
     public void onBackPressed() {
-        if (drawerLayout.isDrawerOpen(GravityCompat.START)) {
-            drawerLayout.closeDrawer(GravityCompat.START);
+        if (binding.drawerLayout.isDrawerOpen(GravityCompat.START)) {
+            binding.drawerLayout.closeDrawer(GravityCompat.START);
         } else {
             moveTaskToBack(true);
         }
     }
 
 
-    // initialize
+    //initialize
     @SuppressLint("ShowToast")
     public void initialize() {
-        initializeWidgets();
+        setWidgetsInitialVisibility();
 
-        setWidgetsVisibility();
-
-        geocoder = new Geocoder(getApplicationContext());
         imm = (InputMethodManager) this.getSystemService(Activity.INPUT_METHOD_SERVICE);
 
         gpsToast = Toast.makeText(this, "Please turn on GPS", Toast.LENGTH_LONG);
         gpsToast.setGravity(Gravity.CENTER, 0, 0);
 
-        drawerToggle = new ActionBarDrawerToggle(this, drawerLayout,
-                R.string.drawer_open, R.string.drawer_close);
-        drawerLayout.addDrawerListener(drawerToggle);
+        binding.drawerLayout.addDrawerListener(new ActionBarDrawerToggle(this, binding.drawerLayout,
+                R.string.drawer_open, R.string.drawer_close));
 
         initializeSuggestionDbElements();
         initializeHistoryDbElements();
@@ -294,11 +244,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 }
             });
 
-            sourceInputEditText.setAdapter(suggestionAdapter);
-            sourceInputEditText.setThreshold(1);
+            binding.sourceInput.setAdapter(suggestionAdapter);
+            binding.sourceInput.setThreshold(1);
 
-            destinationInputEditText.setAdapter(suggestionAdapter);
-            destinationInputEditText.setThreshold(1);
+            binding.destinationInput.setAdapter(suggestionAdapter);
+            binding.destinationInput.setThreshold(1);
         } catch (Exception e) {
             suggestionDb = null;
             Log.d("KashewDevelopers", "Error : " + e.getMessage());
@@ -312,14 +262,14 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             historyCursor = historyDbHelper.get(historyDb);
 
             historyAdapter = new HistoryAdapter(this, historyCursor, 0);
-            historyList.setAdapter(historyAdapter);
+            binding.historyList.setAdapter(historyAdapter);
 
             if (historyCursor.getCount() == 0) {
-                nothingToShowTv.setVisibility(View.VISIBLE);
-                clearHistoryButton.setVisibility(View.GONE);
+                binding.nothingToShow.setVisibility(View.VISIBLE);
+                binding.clearHistory.setVisibility(View.GONE);
             } else {
-                nothingToShowTv.setVisibility(View.GONE);
-                clearHistoryButton.setVisibility(View.VISIBLE);
+                binding.nothingToShow.setVisibility(View.GONE);
+                binding.clearHistory.setVisibility(View.VISIBLE);
             }
         } catch (Exception e) {
             historyDb = null;
@@ -327,60 +277,23 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
     }
 
-    public void initializeWidgets() {
-        // control widgets
-        controlToggleButton = findViewById(R.id.controlToggleButton);
-        distanceUnitButton = findViewById(R.id.distanceUnitButton);
-        controlPanel = findViewById(R.id.controlsPanel);
+    public void setWidgetsInitialVisibility() {
+        binding.distanceUnitButton.setVisibility(View.GONE);
 
-        // source widgets
-        sourceProgressBar = findViewById(R.id.sourceProgressBar);
-        sourcePanel = findViewById(R.id.sourcePanel);
-        sourceInputEditText = findViewById(R.id.sourceInput);
-        clearSource = findViewById(R.id.sourceCloseIcon);
-        sourceUseLocation = findViewById(R.id.useSourceLocation);
-        sourceChooseOnMap = findViewById(R.id.useSourceOnMap);
-        sourceNotFound = findViewById(R.id.sourceNotFound);
+        binding.sourceProgressBar.setVisibility(View.GONE);
+        binding.sourceCloseIcon.setVisibility(View.GONE);
+        binding.sourceNotFound.setVisibility(View.GONE);
+        binding.useSourceLocation.setVisibility(View.GONE);
+        binding.useSourceOnMap.setVisibility(View.GONE);
 
-        // destination widgets
-        destinationProgressBar = findViewById(R.id.destinationProgressBar);
-        destinationPanel = findViewById(R.id.destinationPanel);
-        destinationInputEditText = findViewById(R.id.destinationInput);
-        clearDestination = findViewById(R.id.destinationCloseIcon);
-        destinationUseLocation = findViewById(R.id.useDestinationLocation);
-        destinationChooseOnMap = findViewById(R.id.useDestinationOnMap);
-        destinationNotFound = findViewById(R.id.destinationNotFound);
+        binding.destinationProgressBar.setVisibility(View.GONE);
+        binding.destinationCloseIcon.setVisibility(View.GONE);
+        binding.destinationNotFound.setVisibility(View.GONE);
+        binding.useDestinationLocation.setVisibility(View.GONE);
+        binding.useDestinationOnMap.setVisibility(View.GONE);
 
-        // info widgets
-        tapOnMapMsg = findViewById(R.id.tapOnMapMsg);
-        distanceMsg = findViewById(R.id.distanceMsg);
-
-        // navigation drawer
-        drawerLayout = findViewById(R.id.drawerLayout);
-        navigationDrawer = findViewById(R.id.slider);
-        clearHistoryButton = findViewById(R.id.clear_history);
-        nothingToShowTv = findViewById(R.id.nothing_to_show);
-        historyList = findViewById(R.id.history_list);
-    }
-
-    public void setWidgetsVisibility() {
-        distanceUnitButton.setVisibility(View.GONE);
-        controlPanel.setVisibility(View.GONE);
-
-        clearSource.setVisibility(View.GONE);
-        sourceUseLocation.setVisibility(View.GONE);
-        sourceChooseOnMap.setVisibility(View.GONE);
-        sourceProgressBar.setVisibility(View.GONE);
-        sourceNotFound.setVisibility(View.GONE);
-
-        clearDestination.setVisibility(View.GONE);
-        destinationUseLocation.setVisibility(View.GONE);
-        destinationChooseOnMap.setVisibility(View.GONE);
-        destinationProgressBar.setVisibility(View.GONE);
-        destinationNotFound.setVisibility(View.GONE);
-
-        distanceMsg.setVisibility(View.GONE);
-        tapOnMapMsg.setVisibility(View.GONE);
+        fadeOutView(binding.distanceMsg);
+        binding.tapOnMapMsg.setVisibility(View.GONE);
     }
 
 
@@ -403,18 +316,17 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
     public void animateAndChangeControlToggle() {
-        final int newIcon = (controlPanel.getVisibility() == View.GONE) ?
+        final int newIcon = (binding.controlPanel.getVisibility() == View.GONE) ?
                 R.drawable.close_icon :
                 R.drawable.keyboard_icon;
 
-        final float angle = (controlPanel.getVisibility() == View.GONE) ? 180f : 0f;
+        final float angle = (binding.controlPanel.getVisibility() == View.GONE) ? 180f : 0f;
 
-        controlToggleButton.animate().setDuration(200)
-                .setListener(new AnimatorListenerAdapter() {
+        binding.controlToggleButton.animate().setDuration(200)
+                .withEndAction(new Runnable() {
                     @Override
-                    public void onAnimationEnd(Animator animation) {
-                        super.onAnimationEnd(animation);
-                        controlToggleButton.setImageResource(newIcon);
+                    public void run() {
+                        binding.controlToggleButton.setImageResource(newIcon);
                     }
                 })
                 .rotation(angle);
@@ -423,43 +335,78 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     // listeners
     public void setFocusChangeListeners() {
-        sourceInputEditText.setOnFocusChangeListener(new View.OnFocusChangeListener() {
+        binding.sourceInput.setOnFocusChangeListener(new View.OnFocusChangeListener() {
             @Override
             public void onFocusChange(View view, boolean hasFocus) {
-                int visibility = hasFocus ? View.VISIBLE : View.GONE;
-                sourceUseLocation.setVisibility(visibility);
-                sourceChooseOnMap.setVisibility(visibility);
-
-                if (!hasFocus) {
-                    try {
-                        imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
-                    } catch (Exception e) {
-                        Log.d("KashewDevelopers", "Exception e : " + e.getMessage());
-                    }
+                if (hasFocus) {
+                    binding.useSourceOnMap.setVisibility(View.VISIBLE);
+                    binding.useSourceLocation.setVisibility(View.VISIBLE);
+                    if (chooseSourceOnMap || chooseDestinationOnMap)
+                        disableMarkerPlacement();
                 } else {
-                    disableMarkerPlacement();
+                    binding.useSourceOnMap.setVisibility(View.GONE);
+                    binding.useSourceLocation.setVisibility(View.GONE);
+                    if (imm != null)
+                        imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
                 }
             }
         });
 
-        destinationInputEditText.setOnFocusChangeListener(new View.OnFocusChangeListener() {
+        binding.destinationInput.setOnFocusChangeListener(new View.OnFocusChangeListener() {
             @Override
             public void onFocusChange(View view, boolean hasFocus) {
-                int visibility = hasFocus ? View.VISIBLE : View.GONE;
-                destinationUseLocation.setVisibility(visibility);
-                destinationChooseOnMap.setVisibility(visibility);
-
-                if (!hasFocus) {
-                    try {
-                        imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
-                    } catch (Exception e) {
-                        Log.d("KashewDevelopers", "Exception e : " + e.getMessage());
-                    }
+                if (hasFocus) {
+                    binding.useDestinationOnMap.setVisibility(View.VISIBLE);
+                    binding.useDestinationLocation.setVisibility(View.VISIBLE);
+                    if (chooseSourceOnMap || chooseDestinationOnMap)
+                        disableMarkerPlacement();
                 } else {
-                    disableMarkerPlacement();
+                    binding.useDestinationOnMap.setVisibility(View.GONE);
+                    binding.useDestinationLocation.setVisibility(View.GONE);
+                    if (imm != null)
+                        imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
                 }
             }
         });
+    }
+
+    public void setPlaceTaskListener() {
+        placeTaskListener = new PlaceToLatLngTask.OnTaskCompleteListener() {
+            @Override
+            public void onTaskCompleteListener(LocationObject locationObject, String locationType, int taskId) {
+                if (locationObject != null) {
+                    writePlaceToDB(locationObject.placeName);
+                }
+
+                if (locationType.equals(getString(R.string.source))) {
+                    if (lastSourceTaskId == taskId) {
+                        binding.sourceProgressBar.setVisibility(View.GONE);
+                        binding.sourceCloseIcon.setVisibility(View.VISIBLE);
+                        setSourceMarker(locationObject);
+                        if (locationObject == null) {
+                            binding.sourceNotFound.setVisibility(View.VISIBLE);
+                        } else {
+                            binding.sourceNotFound.setVisibility(View.GONE);
+                        }
+                    } else if (locationObject != null) {
+                        setSourceMarker(locationObject);
+                    }
+                } else {
+                    if (lastDestinationTaskId == taskId) {
+                        binding.destinationProgressBar.setVisibility(View.GONE);
+                        binding.destinationCloseIcon.setVisibility(View.VISIBLE);
+                        setDestinationMarker(locationObject);
+                        if (locationObject == null) {
+                            binding.destinationNotFound.setVisibility(View.VISIBLE);
+                        } else {
+                            binding.destinationNotFound.setVisibility(View.GONE);
+                        }
+                    } else if (locationObject != null) {
+                        setDestinationMarker(locationObject);
+                    }
+                }
+            }
+        };
     }
 
     public void setTextChangeListeners() {
@@ -472,27 +419,28 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
             }
 
+            @SuppressWarnings("deprecation")
             @Override
             public void afterTextChanged(final Editable editable) {
-                sourceProgressBar.setVisibility(View.VISIBLE);
-                clearSource.setVisibility(View.GONE);
-                sourceNotFound.setVisibility(View.GONE);
+                if (editable.length() == 0) {
+                    binding.sourceProgressBar.setVisibility(View.GONE);
+                    binding.sourceCloseIcon.setVisibility(View.GONE);
+                    binding.sourceNotFound.setVisibility(View.GONE);
+                    setSourceMarker(null);
+                    return;
+                }
 
-                Thread thread = new Thread() {
-                    @Override
-                    public void run() {
-                        try {
-                            stringToSourceLatLng(editable.toString());
-                        } catch (Exception e) {
-                            Log.d("KashewDevelopers",
-                                    "sourceInputEditText thread error : " + e.getMessage());
-                        }
-                    }
-                };
-                thread.start();
+                binding.sourceProgressBar.setVisibility(View.VISIBLE);
+                binding.sourceCloseIcon.setVisibility(View.GONE);
+                binding.sourceNotFound.setVisibility(View.GONE);
+
+                new PlaceToLatLngTask(MapsActivity.this,
+                        getString(R.string.source), ++lastSourceTaskId)
+                        .setOnTaskCompleteListener(placeTaskListener)
+                        .execute(editable);
             }
         };
-        sourceInputEditText.addTextChangedListener(sourceTextWatcher);
+        binding.sourceInput.addTextChangedListener(sourceTextWatcher);
 
         destinationTextWatcher = new TextWatcher() {
             @Override
@@ -504,113 +452,47 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             }
 
             @Override
+            @SuppressWarnings("deprecation")
             public void afterTextChanged(final Editable editable) {
-                destinationProgressBar.setVisibility(View.VISIBLE);
-                clearDestination.setVisibility(View.GONE);
-                destinationNotFound.setVisibility(View.GONE);
+                if (editable.length() == 0) {
+                    binding.destinationProgressBar.setVisibility(View.GONE);
+                    binding.destinationCloseIcon.setVisibility(View.GONE);
+                    binding.destinationNotFound.setVisibility(View.GONE);
+                    setDestinationMarker(null);
+                    return;
+                }
 
-                Thread thread = new Thread() {
-                    @Override
-                    public void run() {
-                        try {
-                            stringToDestinationLatLng(editable.toString());
-                        } catch (Exception e) {
-                            Log.d("KashewDevelopers",
-                                    "destinationInputEditText thread error : " + e.getMessage());
-                        }
-                    }
-                };
+                binding.destinationProgressBar.setVisibility(View.VISIBLE);
+                binding.destinationCloseIcon.setVisibility(View.GONE);
+                binding.destinationNotFound.setVisibility(View.GONE);
 
-                thread.start();
+                new PlaceToLatLngTask(MapsActivity.this,
+                        getString(R.string.destination), ++lastDestinationTaskId)
+                        .setOnTaskCompleteListener(placeTaskListener)
+                        .execute(editable);
             }
         };
-        destinationInputEditText.addTextChangedListener(destinationTextWatcher);
-    }
-
-    public void setChooseOnMapListeners() {
-        sourceChooseOnMap.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                sourceInputEditText.clearFocus();
-                sourceInputEditText.setText("");
-                sourceNotFound.setVisibility(View.GONE);
-
-                tapOnMapMsg.setVisibility(View.VISIBLE);
-                placeSourceMarkerOnMap = true;
-                sourceMarker.setDraggable(true);
-            }
-        });
-
-        destinationChooseOnMap.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                destinationInputEditText.clearFocus();
-                destinationInputEditText.setText("");
-                destinationNotFound.setVisibility(View.GONE);
-
-                tapOnMapMsg.setVisibility(View.VISIBLE);
-                placeDestinationMarkerOnMap = true;
-                destinationMarker.setDraggable(true);
-            }
-        });
-    }
-
-    public void setMyLocationListeners() {
-        sourceUseLocation.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                if (hasLocationPermission()) {
-                    if (isGPSOn()) {
-                        sourceInputEditText.clearFocus();
-                        sourceInputEditText.setText("");
-                        sourceNotFound.setVisibility(View.GONE);
-                        getLocationAndSetMarker("Source");
-                    } else {
-                        gpsToast.show();
-                    }
-                } else {
-                    askLocationPermission();
-                }
-            }
-        });
-
-        destinationUseLocation.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                if (hasLocationPermission()) {
-                    if (isGPSOn()) {
-                        destinationInputEditText.clearFocus();
-                        destinationInputEditText.setText("");
-                        destinationNotFound.setVisibility(View.GONE);
-                        getLocationAndSetMarker("Destination");
-                    } else {
-                        gpsToast.show();
-                    }
-                } else {
-                    askLocationPermission();
-                }
-            }
-        });
+        binding.destinationInput.addTextChangedListener(destinationTextWatcher);
     }
 
     public void setHistoryClickListener() {
         // show history on map
         historyAdapter.setOnHistoryClickListener(new HistoryAdapter.OnHistoryClickListener() {
             @Override
-            public void onHistoryClickListener(View view) {
-                String srcName = ((TextView) (view.findViewById(R.id.src))).getText().toString();
-                String srcLL = ((TextView) (view.findViewById(R.id.srcLL))).getText().toString();
-                if (srcName.equals(srcLL)) {
-                    srcName = "Source";
+            public void onHistoryClickListener(HistoryListItemBinding listItemBinding) {
+                String sourceName = listItemBinding.sourceName.getText().toString();
+                String sourceLatLng = listItemBinding.sourceLatLng.getText().toString();
+                if (sourceName.equals(sourceLatLng)) {
+                    sourceName = getString(R.string.source);
                 }
 
-                String dstName = ((TextView) (view.findViewById(R.id.dst))).getText().toString();
-                String dstLL = ((TextView) (view.findViewById(R.id.dstLL))).getText().toString();
-                if (dstName.equals(dstLL)) {
-                    dstName = "Destination";
+                String destinationName = listItemBinding.destinationName.getText().toString();
+                String destinationLatLng = listItemBinding.destinationLatLng.getText().toString();
+                if (destinationName.equals(destinationLatLng)) {
+                    destinationName = getString(R.string.destination);
                 }
 
-                setHistoryMarkers(srcName, srcLL, dstName, dstLL);
+                setHistoryMarkers(sourceName, sourceLatLng, destinationName, destinationLatLng);
             }
         });
 
@@ -631,11 +513,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                         historyAdapter.swapCursor(historyCursor);
                         historyAdapter.notifyDataSetChanged();
                         if (historyCursor.getCount() == 0) {
-                            nothingToShowTv.setVisibility(View.VISIBLE);
-                            clearHistoryButton.setVisibility(View.GONE);
+                            binding.nothingToShow.setVisibility(View.VISIBLE);
+                            binding.clearHistory.setVisibility(View.GONE);
                         } else {
-                            nothingToShowTv.setVisibility(View.GONE);
-                            clearHistoryButton.setVisibility(View.VISIBLE);
+                            binding.nothingToShow.setVisibility(View.GONE);
+                            binding.clearHistory.setVisibility(View.VISIBLE);
                         }
                     }
                 });
@@ -645,155 +527,91 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
 
-    // place to latlng
-    private LocationObject stringToLatLng(String place) {
-        try {
-            List<Address> addressList = geocoder.getFromLocationName(place, 10);
-            if (addressList.size() >= 1) {
-                Address address = addressList.get(0);
-
-                writePlaceToDB(address.getAddressLine(0));
-
-                return new LocationObject(address.getAddressLine(0),
-                        address.getLatitude(), address.getLongitude());
-            }
-        } catch (Exception e) {
-            Log.d("KashewDevelopers", "Error : " + e.getMessage());
-        }
-        return null;
-    }
-
-    private void stringToSourceLatLng(String place) {
-        if (place.length() > 2) {
-            setSourceMarker(stringToLatLng(place));
-        } else {
-            setSourceMarker(null);
-        }
-    }
-
-    private void stringToDestinationLatLng(String place) {
-        if (place.length() > 2) {
-            setDestinationMarker(stringToLatLng(place));
-        } else {
-            setDestinationMarker(null);
-        }
-    }
-
-
     // set marker
     private void setSourceMarker(final LocationObject locationObject) {
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                if (sourceInputEditText.getText().length() > 0) {
-                    clearSource.setVisibility(View.VISIBLE);
-                } else {
-                    clearSource.setVisibility(View.GONE);
-                }
+        if (locationObject != null) {
+            LatLng latLng = new LatLng(locationObject.lat, locationObject.lng);
+            sourceMarker.setPosition(latLng);
+            sourceMarker.setVisible(true);
+            sourceMarker.setTitle(locationObject.placeName);
+            sourceMarker.showInfoWindow();
 
-                sourceProgressBar.setVisibility(View.GONE);
-                distanceMsg.setVisibility(View.GONE);
-                if (locationObject != null) {
-                    LatLng latLng = new LatLng(locationObject.lat, locationObject.lng);
-                    sourceMarker.setPosition(latLng);
-                    sourceMarker.setVisible(true);
-                    sourceMarker.setTitle(locationObject.placeName);
-                    sourceMarker.showInfoWindow();
-                    sourceNotFound.setVisibility(View.GONE);
-
-                    if (!placeSourceMarkerOnMap) {
-                        mMap.moveCamera(CameraUpdateFactory.newLatLng(latLng));
-                        mMap.animateCamera(CameraUpdateFactory.zoomTo(11));
-                    }
-
-                    if (destinationMarker.isVisible()) {
-                        getDistance();
-                    }
-                } else {
-                    sourceMarker.setVisible(false);
-                    distanceLine.setVisible(false);
-                    distanceUnitButton.setVisibility(View.GONE);
-                    if (sourceInputEditText.getText().length() > 0)
-                        sourceNotFound.setVisibility(View.VISIBLE);
-                }
+            if (!chooseSourceOnMap) {
+                mMap.moveCamera(CameraUpdateFactory.newLatLng(latLng));
+                mMap.animateCamera(CameraUpdateFactory.zoomTo(11));
             }
-        });
+
+            if (destinationMarker.isVisible()) {
+                showDistance();
+            }
+        } else {
+            sourceMarker.setVisible(false);
+            distanceLine.setVisible(false);
+            fadeOutView(binding.distanceMsg);
+            binding.distanceUnitButton.setVisibility(View.GONE);
+        }
     }
 
     private void setDestinationMarker(final LocationObject locationObject) {
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                if (destinationInputEditText.getText().length() > 0) {
-                    clearDestination.setVisibility(View.VISIBLE);
-                } else {
-                    clearDestination.setVisibility(View.GONE);
-                }
+        if (locationObject != null) {
+            LatLng latLng = new LatLng(locationObject.lat, locationObject.lng);
+            destinationMarker.setPosition(latLng);
+            destinationMarker.setVisible(true);
+            destinationMarker.setTitle(locationObject.placeName);
+            destinationMarker.showInfoWindow();
 
-                destinationProgressBar.setVisibility(View.GONE);
-                distanceMsg.setVisibility(View.GONE);
-                if (locationObject != null) {
-                    LatLng latLng = new LatLng(locationObject.lat, locationObject.lng);
-                    destinationMarker.setPosition(latLng);
-                    destinationMarker.setVisible(true);
-                    destinationMarker.setTitle(locationObject.placeName);
-                    destinationMarker.showInfoWindow();
-                    destinationNotFound.setVisibility(View.GONE);
-
-                    if (!placeDestinationMarkerOnMap) {
-                        mMap.moveCamera(CameraUpdateFactory.newLatLng(latLng));
-                        mMap.animateCamera(CameraUpdateFactory.zoomTo(11));
-                    }
-
-                    if (sourceMarker.isVisible()) {
-                        getDistance();
-                    }
-                } else {
-                    destinationMarker.setVisible(false);
-                    distanceLine.setVisible(false);
-                    distanceUnitButton.setVisibility(View.GONE);
-                    if (destinationInputEditText.getText().length() > 0)
-                        destinationNotFound.setVisibility(View.VISIBLE);
-                }
+            if (!chooseDestinationOnMap) {
+                mMap.moveCamera(CameraUpdateFactory.newLatLng(latLng));
+                mMap.animateCamera(CameraUpdateFactory.zoomTo(11));
             }
-        });
+
+            if (sourceMarker.isVisible()) {
+                showDistance();
+            }
+        } else {
+            destinationMarker.setVisible(false);
+            distanceLine.setVisible(false);
+            fadeOutView(binding.distanceMsg);
+            binding.distanceUnitButton.setVisibility(View.GONE);
+        }
     }
 
-    private void setHistoryMarkers(String srcName, String srcLL, String dstName, String dstLL) {
+    private void setHistoryMarkers(String sourceName, String sourceLatLng, String destinationName, String destinationLatLng) {
         sourceMarker.setVisible(false);
         destinationMarker.setVisible(false);
 
-        placeSourceMarkerOnMap = false;
-        placeDestinationMarkerOnMap = true;
+        if (chooseDestinationOnMap || chooseSourceOnMap)
+            disableMarkerPlacement();
 
-        sourceInputEditText.removeTextChangedListener(sourceTextWatcher);
-        sourceInputEditText.setText(srcName.equals("Source") ? "" : srcName);
-        sourceInputEditText.addTextChangedListener(sourceTextWatcher);
+        binding.sourceInput.removeTextChangedListener(sourceTextWatcher);
+        binding.sourceInput.setText(sourceName.equals(getString(R.string.source)) ? "" : sourceName);
+        binding.sourceCloseIcon.setVisibility(sourceName.equals(getString(R.string.source)) ? View.GONE : View.VISIBLE);
+        binding.sourceInput.addTextChangedListener(sourceTextWatcher);
 
-        String[] srcLaLn = srcLL.split(",");
-        double sourceLat = Double.parseDouble(srcLaLn[0]);
-        double sourceLng = Double.parseDouble(srcLaLn[1]);
-        LocationObject source = new LocationObject(srcName, sourceLat, sourceLng);
+        String[] sourceLatLngArr = sourceLatLng.split(",");
+        double sourceLat = Double.parseDouble(sourceLatLngArr[0]);
+        double sourceLng = Double.parseDouble(sourceLatLngArr[1]);
+        LocationObject source = new LocationObject(sourceName, sourceLat, sourceLng);
         setSourceMarker(source);
 
 
-        destinationInputEditText.removeTextChangedListener(destinationTextWatcher);
-        destinationInputEditText.setText(dstName.equals("Destination") ? "" : dstName);
-        destinationInputEditText.addTextChangedListener(destinationTextWatcher);
+        binding.destinationInput.removeTextChangedListener(destinationTextWatcher);
+        binding.destinationInput.setText(destinationName.equals(getString(R.string.destination)) ? "" : destinationName);
+        binding.destinationCloseIcon.setVisibility(destinationName.equals(getString(R.string.destination)) ? View.GONE : View.VISIBLE);
+        binding.destinationInput.addTextChangedListener(destinationTextWatcher);
 
-        String[] dstLaLn = dstLL.split(",");
-        double destinationLat = Double.parseDouble(dstLaLn[0]);
-        double destinationLng = Double.parseDouble(dstLaLn[1]);
-        LocationObject destination = new LocationObject(dstName, destinationLat, destinationLng);
+        String[] destinationLatLngArr = destinationLatLng.split(",");
+        double destinationLat = Double.parseDouble(destinationLatLngArr[0]);
+        double destinationLng = Double.parseDouble(destinationLatLngArr[1]);
+        LocationObject destination = new LocationObject(destinationName, destinationLat, destinationLng);
         setDestinationMarker(destination);
 
-        drawerLayout.closeDrawer(GravityCompat.START);
+        binding.drawerLayout.closeDrawer(GravityCompat.START);
 
-        placeSourceMarkerOnMap = placeDestinationMarkerOnMap = false;
         mMap.animateCamera(CameraUpdateFactory.zoomTo(0));
 
-        if (controlPanel.getVisibility() == View.VISIBLE)
-            controlToggleButton.performClick();
+        if (binding.controlPanel.getVisibility() == View.VISIBLE)
+            binding.controlToggleButton.performClick();
     }
 
 
@@ -809,10 +627,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 Manifest.permission.ACCESS_FINE_LOCATION)) {
 
             new AlertDialog.Builder(this)
-                    .setTitle("Location Permission Needed")
-                    .setCancelable(false)
-                    .setMessage("Please give permission to get your location")
-                    .setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                    .setTitle(getString(R.string.location_permission_title))
+                    .setCancelable(true)
+                    .setMessage(getString(R.string.location_permission_message))
+                    .setPositiveButton(getString(R.string.settings), new DialogInterface.OnClickListener() {
                         @Override
                         public void onClick(DialogInterface dialogInterface, int i) {
                             Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
@@ -821,10 +639,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                             startActivity(intent);
                         }
                     })
-                    .setNegativeButton("Cancel", null)
+                    .setNegativeButton(getString(R.string.not_now), null)
                     .create()
                     .show();
-
         } else {
             ActivityCompat
                     .requestPermissions(this,
@@ -859,18 +676,20 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     mFusedLocationClient.removeLocationUpdates(locationCallback);
                 }
 
-                if (markerType.equals("Source")) {
+                if (markerType.equals(getString(R.string.source))) {
+                    binding.sourceProgressBar.setVisibility(View.GONE);
                     if (currentLocation == null)
                         setSourceMarker(null);
                     else
-                        setSourceMarker(new LocationObject("Source",
+                        setSourceMarker(new LocationObject(getString(R.string.source),
                                 currentLocation.getLatitude(),
                                 currentLocation.getLongitude()));
-                } else if (markerType.equals("Destination")) {
+                } else if (markerType.equals(getString(R.string.destination))) {
+                    binding.destinationProgressBar.setVisibility(View.GONE);
                     if (currentLocation == null)
                         setDestinationMarker(null);
                     else
-                        setDestinationMarker(new LocationObject("Destination",
+                        setDestinationMarker(new LocationObject(getString(R.string.destination),
                                 currentLocation.getLatitude(),
                                 currentLocation.getLongitude()));
                 }
@@ -887,25 +706,15 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     // functionality
     public void disableMarkerPlacement() {
-        try {
-            placeDestinationMarkerOnMap = placeSourceMarkerOnMap = false;
-            sourceMarker.setDraggable(false);
-            destinationMarker.setDraggable(false);
-            tapOnMapMsg.setVisibility(View.GONE);
-        } catch (Exception e) {
-            Log.d("KashewDevelopers", "Exception e : " + e.getMessage());
-        }
+        chooseDestinationOnMap = chooseSourceOnMap = false;
+        sourceMarker.setDraggable(false);
+        destinationMarker.setDraggable(false);
+        fadeOutView(binding.tapOnMapMsg);
     }
 
-    private void getDistance() {
-        distanceLine.remove();
-
-        distanceLine = mMap.addPolyline(new PolylineOptions()
-                .add(sourceMarker.getPosition(), destinationMarker.getPosition())
-                .width(5)
-                .color(Color.RED));
-
-        double earthRadius = 6378.137; // Radius of earth in KM
+    private double getDistanceInKm() {
+        // haversine formula
+        double earthRadius = 6378.137; // Radius of earth at equator in KM
         double diffLat = sourceMarker.getPosition().latitude * Math.PI / 180
                 - destinationMarker.getPosition().latitude * Math.PI / 180;
         double diffLon = sourceMarker.getPosition().longitude * Math.PI / 180
@@ -916,7 +725,18 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                         Math.sin(diffLon / 2) * Math.sin(diffLon / 2);
         double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
-        handleDistanceUnit(earthRadius * c);
+        return c * earthRadius;
+    }
+
+    private void showDistance() {
+        distanceLine.remove();
+
+        distanceLine = mMap.addPolyline(new PolylineOptions()
+                .add(sourceMarker.getPosition(), destinationMarker.getPosition())
+                .width(5)
+                .color(Color.RED));
+
+        handleDistanceUnit(getDistanceInKm());
 
         insertHistory();
     }
@@ -926,7 +746,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         double distance;
 
         if (unit.equals("Km")) {
-            distanceUnitButton.setImageResource(R.drawable.km_icon);
+            binding.distanceUnitButton.setImageResource(R.drawable.km_icon);
             if (distanceInKm < 1) {
                 distance = distanceInKm * 1000;
                 unit = (distance > 1) ? "Meters" : "Meter";
@@ -934,7 +754,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 distance = distanceInKm;
             }
         } else {
-            distanceUnitButton.setImageResource(R.drawable.mile_icon);
+            binding.distanceUnitButton.setImageResource(R.drawable.mile_icon);
             distance = distanceInKm * 0.62;
             if (distance < 1) {
                 distance = distance * 1760;
@@ -943,9 +763,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
 
         String formatted = getString(R.string.distance_msg, distance, unit);
-        distanceMsg.setText(formatted);
-        distanceMsg.setVisibility(View.VISIBLE);
-        distanceUnitButton.setVisibility(View.VISIBLE);
+        binding.distanceMsg.setText(formatted);
+        fadeInView(binding.distanceMsg);
+        binding.distanceUnitButton.setVisibility(View.VISIBLE);
     }
 
 
@@ -977,18 +797,18 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         String srcName = sourceMarker.getTitle();
         String srcLL = sourceMarker.getPosition().latitude + "," +
                 sourceMarker.getPosition().longitude;
-        if (srcName.length() == 0 || srcName.equals("Source")) {
+        if (srcName.length() == 0 || srcName.equals(getString(R.string.source))) {
             srcName = srcLL;
         }
 
         String dstName = destinationMarker.getTitle();
         String dstLL = destinationMarker.getPosition().latitude + "," +
                 destinationMarker.getPosition().longitude;
-        if (dstName.length() == 0 || dstName.equals("Destination")) {
+        if (dstName.length() == 0 || dstName.equals(getString(R.string.destination))) {
             dstName = dstLL;
         }
 
-        String distance = distanceMsg.getText().toString();
+        String distance = binding.distanceMsg.getText().toString();
 
         historyDbHelper.insert(historyDb, srcName, srcLL, dstName, dstLL, distance);
         historyCursor = historyDbHelper.get(historyDb);
@@ -996,22 +816,22 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         historyAdapter.notifyDataSetChanged();
 
         if (historyCursor.getCount() == 0) {
-            nothingToShowTv.setVisibility(View.VISIBLE);
-            clearHistoryButton.setVisibility(View.GONE);
+            binding.nothingToShow.setVisibility(View.VISIBLE);
+            binding.clearHistory.setVisibility(View.GONE);
         } else {
-            nothingToShowTv.setVisibility(View.GONE);
-            clearHistoryButton.setVisibility(View.VISIBLE);
+            binding.nothingToShow.setVisibility(View.GONE);
+            binding.clearHistory.setVisibility(View.VISIBLE);
         }
     }
 
 
     // widget clicks
     public void clearSourceClicked(View v) {
-        sourceInputEditText.setText("");
+        binding.sourceInput.setText("");
     }
 
     public void clearDestinationClicked(View v) {
-        destinationInputEditText.setText("");
+        binding.destinationInput.setText("");
     }
 
     public void distanceUnitButtonClicked(View v) {
@@ -1026,14 +846,14 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 } else if (userTypes[i].equals("Miles")) {
                     setUnitPreference("Mi");
                 }
-                getDistance();
+                showDistance();
             }
         });
         builder.show();
     }
 
     public void openHistoryClicked(View v) {
-        drawerLayout.openDrawer(GravityCompat.START);
+        binding.drawerLayout.openDrawer(GravityCompat.START);
     }
 
     public void clearHistoryButtonClicked(View v) {
@@ -1052,24 +872,84 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 historyCursor = historyDbHelper.get(historyDb);
                 historyAdapter.swapCursor(historyCursor);
                 historyAdapter.notifyDataSetChanged();
-                nothingToShowTv.setVisibility(View.VISIBLE);
+                binding.nothingToShow.setVisibility(View.VISIBLE);
             }
         });
         builder.setNegativeButton(R.string.cancel, null);
         builder.show();
     }
 
+    public void controlToggleClicked(View v) {
+        binding.sourceInput.clearFocus();
+        binding.destinationInput.clearFocus();
 
+        animateAndChangeControlToggle();
+
+        if (binding.controlPanel.getVisibility() == View.GONE) {
+            fadeInView(binding.controlPanel);
+        } else {
+            fadeOutView(binding.controlPanel);
+            if (chooseSourceOnMap || chooseDestinationOnMap)
+                disableMarkerPlacement();
+        }
+    }
+
+    public void chooseSourceOnMapClicked(View v) {
+        binding.sourceInput.clearFocus();
+        binding.sourceInput.setText("");
+
+        fadeInView(binding.tapOnMapMsg);
+        chooseSourceOnMap = true;
+        sourceMarker.setDraggable(true);
+    }
+
+    public void chooseDestinationOnMapClicked(View v) {
+        binding.destinationInput.clearFocus();
+        binding.destinationInput.setText("");
+
+        fadeInView(binding.tapOnMapMsg);
+        chooseDestinationOnMap = true;
+        destinationMarker.setDraggable(true);
+    }
+
+    public void useSourceLocationClicked(View v) {
+        if (hasLocationPermission()) {
+            if (isGPSOn()) {
+                binding.sourceInput.clearFocus();
+                binding.sourceInput.setText("");
+                binding.sourceProgressBar.setVisibility(View.VISIBLE);
+                getLocationAndSetMarker(getString(R.string.source));
+            } else {
+                gpsToast.show();
+            }
+        } else {
+            askLocationPermission();
+        }
+    }
+
+    public void useDestinationLocationClicked(View v) {
+        if (hasLocationPermission()) {
+            if (isGPSOn()) {
+                binding.destinationInput.clearFocus();
+                binding.destinationInput.setText("");
+                binding.destinationProgressBar.setVisibility(View.VISIBLE);
+                getLocationAndSetMarker(getString(R.string.destination));
+            } else {
+                gpsToast.show();
+            }
+        } else {
+            askLocationPermission();
+        }
+    }
+
+
+    // ads
     public void manageAds() {
         Random randomGen = new Random();
-        if (randomGen.nextBoolean() && randomGen.nextBoolean()) {
-            MobileAds.initialize(this, new OnInitializationCompleteListener() {
-                @Override
-                public void onInitializationComplete(InitializationStatus initializationStatus) {
-                    AdView adView = findViewById(R.id.adView);
-                    adView.loadAd(new AdRequest.Builder().build());
-                }
-            });
+        if (randomGen.nextBoolean()) {
+            MobileAds.initialize(this);
+            AdView adView = findViewById(R.id.adView);
+            adView.loadAd(new AdRequest.Builder().build());
         }
     }
 
