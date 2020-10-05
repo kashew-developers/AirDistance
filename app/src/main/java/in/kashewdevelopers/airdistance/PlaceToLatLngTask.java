@@ -8,7 +8,6 @@ import android.text.Editable;
 
 import androidx.annotation.NonNull;
 
-import java.io.IOException;
 import java.lang.ref.WeakReference;
 import java.util.List;
 
@@ -33,6 +32,10 @@ public class PlaceToLatLngTask extends AsyncTask<Editable, Void, LocationObject>
 
     @Override
     protected LocationObject doInBackground(Editable... placeList) {
+        if (placeList.length <= 0) {
+            return null;
+        }
+
         String place = String.valueOf(placeList[0]);
 
         Geocoder geocoder = new Geocoder(context.get());
@@ -40,12 +43,15 @@ public class PlaceToLatLngTask extends AsyncTask<Editable, Void, LocationObject>
 
         try {
             addressList = geocoder.getFromLocationName(place, 10);
-        } catch (IOException e) {
+        } catch (Exception e) {
             addressList = null;
         }
 
         if (addressList != null && addressList.size() >= 1) {
             Address address = addressList.get(0);
+
+            if (address.getMaxAddressLineIndex() < 0)
+                return null;
 
             return new LocationObject(address.getAddressLine(0),
                     address.getLatitude(), address.getLongitude());
