@@ -422,6 +422,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             @SuppressWarnings("deprecation")
             @Override
             public void afterTextChanged(final Editable editable) {
+                // map not yet initialised - onMapReady not executed
+                if (sourceMarker == null) {
+                    binding.sourceCloseIcon.setVisibility(View.VISIBLE);
+                    binding.sourceNotFound.setVisibility(View.VISIBLE);
+                    return;
+                }
+
                 if (editable.length() == 0) {
                     binding.sourceProgressBar.setVisibility(View.GONE);
                     binding.sourceCloseIcon.setVisibility(View.GONE);
@@ -454,6 +461,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             @Override
             @SuppressWarnings("deprecation")
             public void afterTextChanged(final Editable editable) {
+                // map not yet initialised - onMapReady not executed
+                if (destinationMarker == null) {
+                    binding.destinationCloseIcon.setVisibility(View.VISIBLE);
+                    binding.destinationNotFound.setVisibility(View.VISIBLE);
+                    return;
+                }
+
                 if (editable.length() == 0) {
                     binding.destinationProgressBar.setVisibility(View.GONE);
                     binding.destinationCloseIcon.setVisibility(View.GONE);
