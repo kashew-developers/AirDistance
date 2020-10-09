@@ -1,5 +1,6 @@
 package in.kashewdevelopers.airdistance;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.ActionBarDrawerToggle;
 import androidx.appcompat.app.AlertDialog;
 import androidx.core.app.ActivityCompat;
@@ -64,7 +65,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     // Widgets helpers
     TextWatcher sourceTextWatcher, destinationTextWatcher;
-    PlaceToLatLngTask.OnTaskCompleteListener placeTaskListener;
+    PlaceToLatLngTask.OnTaskCompleteListener placeToLatLngTaskListener;
+    LatLngToPlaceTask.OnTaskCompleteListener latLngToPlaceTaskListener;
     int lastSourceTaskId = 0, lastDestinationTaskId = 0;
 
     // Map Elements
@@ -111,7 +113,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         // set listeners
         setFocusChangeListeners();
-        setPlaceTaskListener();
+        setPlaceToLatLngTaskListener();
+        setLatLngToPlaceTaskListener();
         setTextChangeListeners();
         setHistoryClickListener();
     }
@@ -145,9 +148,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 if (chooseDestinationOnMap) {
                     setDestinationMarker(new LocationObject(getString(R.string.destination),
                             latLng.latitude, latLng.longitude));
+                    initiatePlaceNameRetrieval(latLng, getString(R.string.destination));
                 } else if (chooseSourceOnMap) {
                     setSourceMarker(new LocationObject(getString(R.string.source),
                             latLng.latitude, latLng.longitude));
+                    initiatePlaceNameRetrieval(latLng, getString(R.string.source));
                 } else if (binding.controlPanel.getVisibility() == View.VISIBLE) {
                     binding.controlToggleButton.performClick();
                 }
@@ -170,9 +175,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 if (chooseDestinationOnMap) {
                     setDestinationMarker(new LocationObject(getString(R.string.destination),
                             marker.getPosition().latitude, marker.getPosition().longitude));
+                    initiatePlaceNameRetrieval(marker.getPosition(), getString(R.string.destination));
                 } else if (chooseSourceOnMap) {
                     setSourceMarker(new LocationObject(getString(R.string.source),
                             marker.getPosition().latitude, marker.getPosition().longitude));
+                    initiatePlaceNameRetrieval(marker.getPosition(), getString(R.string.source));
                 }
             }
         });
@@ -370,8 +377,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         });
     }
 
-    public void setPlaceTaskListener() {
-        placeTaskListener = new PlaceToLatLngTask.OnTaskCompleteListener() {
+    public void setPlaceToLatLngTaskListener() {
+        placeToLatLngTaskListener = new PlaceToLatLngTask.OnTaskCompleteListener() {
             @Override
             public void onTaskCompleteListener(LocationObject locationObject, String locationType, int taskId) {
                 if (locationObject != null) {
@@ -405,6 +412,46 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                         setDestinationMarker(locationObject);
                     }
                 }
+            }
+        };
+    }
+
+    public void setLatLngToPlaceTaskListener() {
+        latLngToPlaceTaskListener = new LatLngToPlaceTask.OnTaskCompleteListener() {
+            @Override
+            public void onTaskCompleteListener(LatLng coordinates, String placeName, String placeType) {
+                if (historyDbHelper == null || historyDb == null)
+                    return;
+
+                String coordinateString = coordinates.latitude + "," + coordinates.longitude;
+
+                if (placeType.equals(getString(R.string.source))) {
+                    if (sourceMarker.isVisible() && sourceMarker.getPosition().equals(coordinates)) {
+                        sourceMarker.setTitle(placeName);
+                        sourceMarker.showInfoWindow();
+
+                        binding.sourceInput.removeTextChangedListener(sourceTextWatcher);
+                        binding.sourceInput.setText(placeName);
+                        binding.sourceCloseIcon.setVisibility(View.VISIBLE);
+                        binding.sourceInput.addTextChangedListener(sourceTextWatcher);
+                    }
+                } else if (placeType.equals(getString(R.string.destination))) {
+                    if (destinationMarker.isVisible() && destinationMarker.getPosition().equals(coordinates)) {
+                        destinationMarker.setTitle(placeName);
+                        destinationMarker.showInfoWindow();
+
+                        binding.destinationInput.removeTextChangedListener(destinationTextWatcher);
+                        binding.destinationInput.setText(placeName);
+                        binding.destinationCloseIcon.setVisibility(View.VISIBLE);
+                        binding.destinationInput.addTextChangedListener(destinationTextWatcher);
+                    }
+                }
+
+                historyDbHelper.updateSourceName(historyDb, coordinateString, placeName);
+                historyDbHelper.updateDestinationName(historyDb, coordinateString, placeName);
+                refreshHistoryList();
+
+                writePlaceToDB(placeName);
             }
         };
     }
@@ -443,7 +490,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
                 new PlaceToLatLngTask(MapsActivity.this,
                         getString(R.string.source), ++lastSourceTaskId)
-                        .setOnTaskCompleteListener(placeTaskListener)
+                        .setOnTaskCompleteListener(placeToLatLngTaskListener)
                         .execute(editable);
             }
         };
@@ -482,7 +529,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
                 new PlaceToLatLngTask(MapsActivity.this,
                         getString(R.string.destination), ++lastDestinationTaskId)
-                        .setOnTaskCompleteListener(placeTaskListener)
+                        .setOnTaskCompleteListener(placeToLatLngTaskListener)
                         .execute(editable);
             }
         };
@@ -522,17 +569,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     @Override
                     public void onClick(DialogInterface dialogInterface, int i) {
                         historyDbHelper.delete(historyDb, hashCode);
-
-                        historyCursor = historyDbHelper.get(historyDb);
-                        historyAdapter.swapCursor(historyCursor);
-                        historyAdapter.notifyDataSetChanged();
-                        if (historyCursor.getCount() == 0) {
-                            binding.nothingToShow.setVisibility(View.VISIBLE);
-                            binding.clearHistory.setVisibility(View.GONE);
-                        } else {
-                            binding.nothingToShow.setVisibility(View.GONE);
-                            binding.clearHistory.setVisibility(View.VISIBLE);
-                        }
+                        refreshHistoryList();
                     }
                 });
                 builder.show();
@@ -694,18 +731,22 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     binding.sourceProgressBar.setVisibility(View.GONE);
                     if (currentLocation == null)
                         setSourceMarker(null);
-                    else
+                    else {
                         setSourceMarker(new LocationObject(getString(R.string.source),
-                                currentLocation.getLatitude(),
-                                currentLocation.getLongitude()));
+                                currentLocation.getLatitude(), currentLocation.getLongitude()));
+                        LatLng coordinates = new LatLng(currentLocation.getLatitude(), currentLocation.getLongitude());
+                        initiatePlaceNameRetrieval(coordinates, getString(R.string.source));
+                    }
                 } else if (markerType.equals(getString(R.string.destination))) {
                     binding.destinationProgressBar.setVisibility(View.GONE);
                     if (currentLocation == null)
                         setDestinationMarker(null);
-                    else
+                    else {
                         setDestinationMarker(new LocationObject(getString(R.string.destination),
-                                currentLocation.getLatitude(),
-                                currentLocation.getLongitude()));
+                                currentLocation.getLatitude(), currentLocation.getLongitude()));
+                        LatLng coordinates = new LatLng(currentLocation.getLatitude(), currentLocation.getLongitude());
+                        initiatePlaceNameRetrieval(coordinates, getString(R.string.destination));
+                    }
                 }
             }
         };
@@ -782,6 +823,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         binding.distanceUnitButton.setVisibility(View.VISIBLE);
     }
 
+    @SuppressWarnings("deprecation")
+    public void initiatePlaceNameRetrieval(@NonNull LatLng coordinates, @NonNull String placeType) {
+        new LatLngToPlaceTask(MapsActivity.this, placeType)
+                .setTaskListener(latLngToPlaceTaskListener)
+                .execute(coordinates);
+    }
+
 
     // shared preference
     public String getUnitPreference() {
@@ -825,6 +873,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         String distance = binding.distanceMsg.getText().toString();
 
         historyDbHelper.insert(historyDb, srcName, srcLL, dstName, dstLL, distance);
+        refreshHistoryList();
+    }
+
+    public void refreshHistoryList() {
         historyCursor = historyDbHelper.get(historyDb);
         historyAdapter.swapCursor(historyCursor);
         historyAdapter.notifyDataSetChanged();
@@ -882,11 +934,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             @Override
             public void onClick(DialogInterface dialogInterface, int i) {
                 historyDbHelper.deleteAll(historyDb);
-
-                historyCursor = historyDbHelper.get(historyDb);
-                historyAdapter.swapCursor(historyCursor);
-                historyAdapter.notifyDataSetChanged();
-                binding.nothingToShow.setVisibility(View.VISIBLE);
+                refreshHistoryList();
             }
         });
         builder.setNegativeButton(R.string.cancel, null);
