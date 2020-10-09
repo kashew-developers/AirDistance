@@ -6,6 +6,8 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 
+import androidx.annotation.NonNull;
+
 public class HistoryDbHelper extends SQLiteOpenHelper {
 
     // table details
@@ -45,7 +47,7 @@ public class HistoryDbHelper extends SQLiteOpenHelper {
 
 
     void insert(SQLiteDatabase db, String srcName, String srcLL, String dstName, String dstLL, String distance) {
-        String hash = srcName + srcLL + dstName + dstLL;
+        String hash = srcLL + dstLL;
         hash = String.valueOf(hash.hashCode());
 
         ContentValues data = new ContentValues();
@@ -73,6 +75,20 @@ public class HistoryDbHelper extends SQLiteOpenHelper {
 
     void delete(SQLiteDatabase db, String hashCode) {
         db.delete(DB_NAME, HASH + " = ?", new String[]{hashCode});
+    }
+
+    void updateDestinationName(@NonNull SQLiteDatabase db, @NonNull String destinationLatLng, @NonNull String destinationName) {
+        ContentValues values = new ContentValues();
+        values.put(DST_NAME, destinationName);
+
+        db.update(DB_NAME, values, DST_LL + " = ?", new String[]{destinationLatLng});
+    }
+
+    void updateSourceName(@NonNull SQLiteDatabase db, @NonNull String sourceLatLng, @NonNull String sourceName) {
+        ContentValues values = new ContentValues();
+        values.put(SRC_NAME, sourceName);
+
+        db.update(DB_NAME, values, SRC_LL + " = ?", new String[]{sourceLatLng});
     }
 
 
