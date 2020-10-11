@@ -28,10 +28,12 @@
         <td><img src="media/screenshots/ss_1.png" /></td>
         <td><img src="media/screenshots/ss_2.png" /></td>
         <td><img src="media/screenshots/ss_3.png" /></td>
+        <td><img src="media/screenshots/ss_4.png" /></td>
     </tr>
     <tr>
-        <td><img src="media/screenshots/ss_4.png" /></td>
         <td><img src="media/screenshots/ss_5.png" /></td>
         <td><img src="media/screenshots/ss_6.png" /></td>
+        <td><img src="media/screenshots/ss_7.png" /></td>
+        <td><img src="media/screenshots/ss_8.png" /></td>
     </tr>
 </table>
