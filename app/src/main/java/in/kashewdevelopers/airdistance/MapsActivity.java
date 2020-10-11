@@ -37,7 +37,6 @@ import android.widget.SimpleCursorAdapter;
 import android.widget.Toast;
 
 import com.google.android.gms.ads.AdRequest;
-import com.google.android.gms.ads.AdView;
 import com.google.android.gms.ads.MobileAds;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationCallback;
@@ -75,6 +74,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     Polyline distanceLine;
     boolean chooseDestinationOnMap = false, chooseSourceOnMap = false;
     LocationCallback locationCallback = null;
+    int selectedMapType = 0;
 
     // constants
     int MY_PERMISSIONS_REQUEST_LOCATION = 123;
@@ -915,6 +915,28 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 showDistance();
             }
         });
+        builder.setNegativeButton(getString(R.string.cancel), null);
+        builder.show();
+    }
+
+    public void layerButtonClicked(View v) {
+        final String[] mapTypes = {"Normal", "Satellite", "Hybrid", "Terrain"};
+        final int[] mapTypesCode = {GoogleMap.MAP_TYPE_NORMAL, GoogleMap.MAP_TYPE_SATELLITE,
+                GoogleMap.MAP_TYPE_HYBRID, GoogleMap.MAP_TYPE_TERRAIN};
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle(getText(R.string.map_type));
+        builder.setSingleChoiceItems(mapTypes, selectedMapType, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                if (mMap != null) {
+                    mMap.setMapType(mapTypesCode[which]);
+                }
+                selectedMapType = which;
+                dialog.cancel();
+            }
+        });
+        builder.setNegativeButton(getString(R.string.cancel), null);
         builder.show();
     }
 
@@ -1010,8 +1032,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         Random randomGen = new Random();
         if (randomGen.nextBoolean()) {
             MobileAds.initialize(this);
-            AdView adView = findViewById(R.id.adView);
-            adView.loadAd(new AdRequest.Builder().build());
+            binding.adView.loadAd(new AdRequest.Builder().build());
         }
     }
 
