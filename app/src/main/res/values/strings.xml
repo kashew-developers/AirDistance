@@ -11,6 +11,15 @@
     <string name="tap_on_map">Tap anywhere on map to add marker.\nTap and hold to move marker</string>
     <string name="distance_msg">Distance : %1$.2f %2$s</string>
     <string name="distance_in">Distance in</string>
+    <string name="average_time">Average Time : %1s</string>
+    <plurals name="hours">
+        <item quantity="one">%1d Hour</item>
+        <item quantity="other">%1d Hours</item>
+    </plurals>
+    <plurals name="minutes">
+        <item quantity="one">%1d Minute</item>
+        <item quantity="other">%1d Minutes</item>
+    </plurals>
 
     <string name="history">History</string>
     <string name="clear_history">Clear History</string>

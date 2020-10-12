@@ -313,6 +313,23 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/controlsBarrier" />
 
+        <TextView
+            android:id="@+id/averageTimeMsg"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:background="#88000000"
+            android:gravity="center"
+            android:paddingStart="5dp"
+            android:paddingTop="0dp"
+            android:paddingEnd="5dp"
+            android:paddingBottom="5dp"
+            android:text="@string/app_name"
+            android:textColor="#ffffff"
+            android:textStyle="bold"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/distanceMsg" />
+
         <com.google.android.material.floatingactionbutton.FloatingActionButton
             android:id="@+id/historyButton"
             android:layout_width="wrap_content"

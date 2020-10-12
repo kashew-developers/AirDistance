@@ -79,6 +79,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     // constants
     int MY_PERMISSIONS_REQUEST_LOCATION = 123;
     long fadeInDuration = 200, fadeOutDuration = 200;
+    int avgCruisingSpeedInKmPerHour = 835, avgCruisingSpeedInKmPerMinute = 14;
 
     InputMethodManager imm;
     Toast gpsToast;
@@ -300,6 +301,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         binding.useDestinationOnMap.setVisibility(View.GONE);
 
         fadeOutView(binding.distanceMsg);
+        fadeOutView(binding.averageTimeMsg);
         binding.tapOnMapMsg.setVisibility(View.GONE);
     }
 
@@ -599,6 +601,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             sourceMarker.setVisible(false);
             distanceLine.setVisible(false);
             fadeOutView(binding.distanceMsg);
+            fadeOutView(binding.averageTimeMsg);
             binding.distanceUnitButton.setVisibility(View.GONE);
         }
     }
@@ -623,6 +626,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             destinationMarker.setVisible(false);
             distanceLine.setVisible(false);
             fadeOutView(binding.distanceMsg);
+            fadeOutView(binding.averageTimeMsg);
             binding.distanceUnitButton.setVisibility(View.GONE);
         }
     }
@@ -791,9 +795,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 .width(5)
                 .color(Color.RED));
 
-        handleDistanceUnit(getDistanceInKm());
-
+        double distanceInKm = getDistanceInKm();
+        handleDistanceUnit(distanceInKm);
         insertHistory();
+
+        showTime(distanceInKm);
     }
 
     public void handleDistanceUnit(double distanceInKm) {
@@ -828,6 +834,36 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         new LatLngToPlaceTask(MapsActivity.this, placeType)
                 .setTaskListener(latLngToPlaceTaskListener)
                 .execute(coordinates);
+    }
+
+    public void showTime(double distanceInKm) {
+        int hours, minutes;
+
+        try {
+            hours = (int) (distanceInKm / avgCruisingSpeedInKmPerHour);
+            distanceInKm %= avgCruisingSpeedInKmPerHour;
+            minutes = (int) (distanceInKm / avgCruisingSpeedInKmPerMinute);
+        } catch (Exception e) {
+            fadeOutView(binding.averageTimeMsg);
+            return;
+        }
+
+        StringBuilder time = new StringBuilder();
+
+        if (hours > 0) {
+            time.append(getResources().getQuantityString(R.plurals.hours, hours, hours));
+        }
+        if (minutes > 0) {
+            if (time.length() > 0) time.append(", ");
+            time.append(getResources().getQuantityString(R.plurals.minutes, minutes, minutes));
+        }
+
+        if (time.length() > 0) {
+            binding.averageTimeMsg.setText(getString(R.string.average_time, time));
+            fadeInView(binding.averageTimeMsg);
+        } else {
+            fadeOutView(binding.averageTimeMsg);
+        }
     }
 
 
