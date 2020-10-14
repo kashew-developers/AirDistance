@@ -1,4 +1,4 @@
-package in.kashewdevelopers.airdistance;
+package in.kashewdevelopers.airdistance.history_components;
 
 import android.content.ContentValues;
 import android.content.Context;
@@ -16,16 +16,16 @@ public class HistoryDbHelper extends SQLiteOpenHelper {
 
 
     // columns in table
-    static String SRC_NAME = "src_name";
-    static String SRC_LL = "src_lat_lng";
-    static String DST_NAME = "dst_name";
-    static String DST_LL = "dst_lat_lng";
-    static String DISTANCE = "distance";
-    static String HASH = "hash";
+    public static String SRC_NAME = "src_name";
+    public static String SRC_LL = "src_lat_lng";
+    public static String DST_NAME = "dst_name";
+    public static String DST_LL = "dst_lat_lng";
+    public static String DISTANCE = "distance";
+    public static String HASH = "hash";
     private static String TIME = "timestamp";
 
 
-    HistoryDbHelper(Context context) {
+    public HistoryDbHelper(Context context) {
         super(context, DB_NAME, null, DB_VERSION);
     }
 
@@ -46,7 +46,7 @@ public class HistoryDbHelper extends SQLiteOpenHelper {
     }
 
 
-    void insert(SQLiteDatabase db, String srcName, String srcLL, String dstName, String dstLL, String distance) {
+    public void insert(SQLiteDatabase db, String srcName, String srcLL, String dstName, String dstLL, String distance) {
         String hash = srcLL + dstLL;
         hash = String.valueOf(hash.hashCode());
 
@@ -62,29 +62,29 @@ public class HistoryDbHelper extends SQLiteOpenHelper {
     }
 
 
-    Cursor get(SQLiteDatabase db) {
+    public Cursor get(SQLiteDatabase db) {
         return db.query(DB_NAME, null, null, null, null,
                 null, TIME + " DESC");
     }
 
 
-    void deleteAll(SQLiteDatabase db) {
+    public void deleteAll(SQLiteDatabase db) {
         db.delete(DB_NAME, null, null);
     }
 
 
-    void delete(SQLiteDatabase db, String hashCode) {
+    public void delete(SQLiteDatabase db, String hashCode) {
         db.delete(DB_NAME, HASH + " = ?", new String[]{hashCode});
     }
 
-    void updateDestinationName(@NonNull SQLiteDatabase db, @NonNull String destinationLatLng, @NonNull String destinationName) {
+    public void updateDestinationName(@NonNull SQLiteDatabase db, @NonNull String destinationLatLng, @NonNull String destinationName) {
         ContentValues values = new ContentValues();
         values.put(DST_NAME, destinationName);
 
         db.update(DB_NAME, values, DST_LL + " = ?", new String[]{destinationLatLng});
     }
 
-    void updateSourceName(@NonNull SQLiteDatabase db, @NonNull String sourceLatLng, @NonNull String sourceName) {
+    public void updateSourceName(@NonNull SQLiteDatabase db, @NonNull String sourceLatLng, @NonNull String sourceName) {
         ContentValues values = new ContentValues();
         values.put(SRC_NAME, sourceName);
 

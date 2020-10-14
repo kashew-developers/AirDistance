@@ -1,4 +1,4 @@
-package in.kashewdevelopers.airdistance;
+package in.kashewdevelopers.airdistance.history_components;
 
 import android.content.Context;
 import android.database.Cursor;
@@ -11,7 +11,7 @@ import in.kashewdevelopers.airdistance.databinding.HistoryListItemBinding;
 
 public class HistoryAdapter extends CursorAdapter {
 
-    HistoryAdapter(Context context, Cursor cursor, int flags) {
+    public HistoryAdapter(Context context, Cursor cursor, int flags) {
         super(context, cursor, flags);
     }
 
@@ -66,11 +66,11 @@ public class HistoryAdapter extends CursorAdapter {
 
 
     // set onClick interfaces
-    void setOnHistoryClickListener(OnHistoryClickListener onHistoryClickListener) {
+    public void setOnHistoryClickListener(OnHistoryClickListener onHistoryClickListener) {
         this.onHistoryClickListener = onHistoryClickListener;
     }
 
-    void setOnDeleteClickListener(OnDeleteClickListener onDeleteClickListener) {
+    public void setOnDeleteClickListener(OnDeleteClickListener onDeleteClickListener) {
         this.onDeleteClickListener = onDeleteClickListener;
     }
 
@@ -81,11 +81,11 @@ public class HistoryAdapter extends CursorAdapter {
 
 
     // interfaces used to implement onClick behaviours
-    interface OnHistoryClickListener {
+    public interface OnHistoryClickListener {
         void onHistoryClickListener(HistoryListItemBinding listItemBinding);
     }
 
-    interface OnDeleteClickListener {
+    public interface OnDeleteClickListener {
         void onDeleteClickListener(String hashCode);
     }
 

@@ -1,4 +1,4 @@
-package in.kashewdevelopers.airdistance;
+package in.kashewdevelopers.airdistance.suggestion_components;
 
 import android.content.ContentValues;
 import android.content.Context;
@@ -13,7 +13,7 @@ public class SuggestionDbHelper extends SQLiteOpenHelper {
     private static final int DB_VERSION = 1;
 
 
-    SuggestionDbHelper(Context context) {
+    public SuggestionDbHelper(Context context) {
         super(context, DB_NAME, null, DB_VERSION);
     }
 
@@ -27,7 +27,7 @@ public class SuggestionDbHelper extends SQLiteOpenHelper {
     }
 
 
-    void insert(SQLiteDatabase db, String placeName) {
+    public void insert(SQLiteDatabase db, String placeName) {
         ContentValues data = new ContentValues();
         data.put("NAME", placeName);
 
@@ -35,7 +35,7 @@ public class SuggestionDbHelper extends SQLiteOpenHelper {
     }
 
 
-    Cursor search(SQLiteDatabase db, String placeName) {
+    public Cursor search(SQLiteDatabase db, String placeName) {
         String condition = "NAME like '%" + placeName + "%'";
         String orderBy = "NAME ASC";
         String limit = "5";

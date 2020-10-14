@@ -55,8 +55,13 @@ import com.google.android.gms.maps.model.PolylineOptions;
 
 import java.util.Random;
 
+import in.kashewdevelopers.airdistance.async_tasks.LatLngToPlaceTask;
+import in.kashewdevelopers.airdistance.async_tasks.PlaceToLatLngTask;
 import in.kashewdevelopers.airdistance.databinding.ActivityMapsBinding;
 import in.kashewdevelopers.airdistance.databinding.HistoryListItemBinding;
+import in.kashewdevelopers.airdistance.history_components.HistoryAdapter;
+import in.kashewdevelopers.airdistance.history_components.HistoryDbHelper;
+import in.kashewdevelopers.airdistance.suggestion_components.SuggestionDbHelper;
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
 

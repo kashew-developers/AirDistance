@@ -1,4 +1,4 @@
-package in.kashewdevelopers.airdistance;
+package in.kashewdevelopers.airdistance.async_tasks;
 
 import android.content.Context;
 import android.location.Address;
@@ -10,6 +10,9 @@ import androidx.annotation.NonNull;
 
 import java.lang.ref.WeakReference;
 import java.util.List;
+
+import in.kashewdevelopers.airdistance.LocationObject;
+
 
 @SuppressWarnings("deprecation")
 public class PlaceToLatLngTask extends AsyncTask<Editable, Void, LocationObject> {

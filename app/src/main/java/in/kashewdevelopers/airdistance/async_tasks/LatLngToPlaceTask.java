@@ -1,4 +1,4 @@
-package in.kashewdevelopers.airdistance;
+package in.kashewdevelopers.airdistance.async_tasks;
 
 import android.content.Context;
 import android.location.Address;
@@ -19,7 +19,7 @@ public class LatLngToPlaceTask extends AsyncTask<LatLng, Void, String> {
     private LatLng coordinates;
     private String placeType;
 
-    LatLngToPlaceTask(@NonNull Context context, @NonNull String placeType) {
+    public LatLngToPlaceTask(@NonNull Context context, @NonNull String placeType) {
         weakReference = new WeakReference<>(context);
         this.placeType = placeType;
     }
