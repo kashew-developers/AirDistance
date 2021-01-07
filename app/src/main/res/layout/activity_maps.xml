@@ -340,7 +340,7 @@
             android:scaleType="center"
             android:src="@drawable/history_icon"
             app:fabSize="mini"
-            app:layout_constraintBottom_toTopOf="@id/adView"
+            app:layout_constraintBottom_toTopOf="@id/tapOnMapMsg"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_goneMarginStart="10dp"
             app:maxImageSize="20dp" />
@@ -355,19 +355,9 @@
             android:scaleType="center"
             android:src="@drawable/layer_icon"
             app:fabSize="mini"
-            app:layout_constraintBottom_toTopOf="@id/adView"
+            app:layout_constraintBottom_toTopOf="@id/tapOnMapMsg"
             app:layout_constraintEnd_toEndOf="parent"
             app:maxImageSize="20dp" />
-
-        <com.google.android.gms.ads.AdView xmlns:ads="http://schemas.android.com/apk/res-auto"
-            android:id="@+id/adView"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            ads:adSize="BANNER"
-            ads:adUnitId="@string/bottom_ad_id"
-            ads:layout_constraintBottom_toTopOf="@id/tapOnMapMsg"
-            ads:layout_constraintEnd_toEndOf="parent"
-            ads:layout_constraintStart_toStartOf="parent" />
 
         <TextView
             android:id="@+id/tapOnMapMsg"
@@ -417,10 +407,10 @@
             android:focusable="true"
             android:onClick="clearHistoryButtonClicked"
             android:src="@drawable/delete_icon"
-            android:tint="@android:color/darker_gray"
             app:layout_constraintBottom_toBottomOf="@id/historyLabel"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="@id/historyLabel" />
+            app:layout_constraintTop_toTopOf="@id/historyLabel"
+            app:tint="@android:color/darker_gray" />
 
         <androidx.constraintlayout.widget.Barrier
             android:id="@+id/headerSep"

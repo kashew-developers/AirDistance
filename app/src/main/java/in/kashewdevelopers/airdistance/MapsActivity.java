@@ -36,8 +36,6 @@ import android.widget.FilterQueryProvider;
 import android.widget.SimpleCursorAdapter;
 import android.widget.Toast;
 
-import com.google.android.gms.ads.AdRequest;
-import com.google.android.gms.ads.MobileAds;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationCallback;
 import com.google.android.gms.location.LocationRequest;
@@ -115,7 +113,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             mapFragment.getMapAsync(this);
 
         initialize();
-        manageAds();
 
         // set listeners
         setFocusChangeListeners();
@@ -1064,16 +1061,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             }
         } else {
             askLocationPermission();
-        }
-    }
-
-
-    // ads
-    public void manageAds() {
-        Random randomGen = new Random();
-        if (randomGen.nextBoolean()) {
-            MobileAds.initialize(this);
-            binding.adView.loadAd(new AdRequest.Builder().build());
         }
     }
 
