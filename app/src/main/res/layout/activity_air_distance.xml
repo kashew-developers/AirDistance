@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.drawerlayout.widget.DrawerLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/drawerLayout"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fitsSystemWindows="true"
+    tools:context=".AirDistance"
+    tools:openDrawer="start">
+
+    <!-- main content -->
+    <include
+        android:id="@+id/airDistance"
+        layout="@layout/air_distance_layout"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <!-- drawer -->
+    <include
+        android:id="@+id/history"
+        layout="@layout/history_layout"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_gravity="start" />
+
+</androidx.drawerlayout.widget.DrawerLayout>
