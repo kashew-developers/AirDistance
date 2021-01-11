@@ -1,5 +1,8 @@
 package `in`.kashewdevelopers.airdistance.providers
 
+import android.content.Context
+import android.view.Gravity
+import android.widget.Toast
 import com.google.android.gms.maps.model.LatLng
 import kotlin.math.atan2
 import kotlin.math.cos
@@ -26,5 +29,14 @@ class Functions {
 
             return c * earthRadius
         }
+
+        fun showToast(context: Context, stringRes: Int, centerToast: Boolean) {
+            val toast = Toast.makeText(context, stringRes, Toast.LENGTH_LONG)
+            if (centerToast) {
+                toast.setGravity(Gravity.CENTER, 0, 0)
+            }
+            toast.show()
+        }
+
     }
 }

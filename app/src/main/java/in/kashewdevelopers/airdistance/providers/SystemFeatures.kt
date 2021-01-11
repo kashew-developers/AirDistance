@@ -4,22 +4,12 @@ import android.app.Activity
 import android.content.Context
 import android.content.pm.PackageManager
 import android.location.LocationManager
-import android.view.Gravity
 import android.view.View
 import android.view.inputmethod.InputMethodManager
-import android.widget.Toast
 import androidx.core.content.ContextCompat
 
 class SystemFeatures {
     companion object {
-        fun showToast(context: Context, stringRes: Int, centerToast: Boolean) {
-            val toast = Toast.makeText(context, stringRes, Toast.LENGTH_LONG)
-            if (centerToast) {
-                toast.setGravity(Gravity.CENTER, 0, 0)
-            }
-            toast.show()
-        }
-
         fun hasPermission(context: Context, permission: String): Boolean {
             return ContextCompat
                     .checkSelfPermission(context, permission) ==
