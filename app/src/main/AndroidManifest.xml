@@ -28,7 +28,8 @@
 
         <activity
             android:name=".AirDistance"
-            android:configChanges="orientation|screenSize|screenLayout" />
+            android:configChanges="orientation|screenSize|screenLayout"
+            android:noHistory="true" />
 
     </application>
 

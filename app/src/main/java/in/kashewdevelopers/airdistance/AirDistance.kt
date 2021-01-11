@@ -120,6 +120,7 @@ class AirDistance : FragmentActivity(), OnMapReadyCallback {
         if (binding.drawerLayout.isDrawerOpen(GravityCompat.START)) {
             binding.drawerLayout.closeDrawer(GravityCompat.START)
         } else {
+            moveTaskToBack(true)
             super.onBackPressed()
         }
     }
