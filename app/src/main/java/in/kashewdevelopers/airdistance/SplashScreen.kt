@@ -31,7 +31,7 @@ class SplashScreen : AppCompatActivity() {
         binding.appName.startAnimation(animation)
 
         Handler(Looper.getMainLooper())
-                .postDelayed({ startActivity(Intent(this@SplashScreen, MapsActivity::class.java)) }, 2000)
+                .postDelayed({ startActivity(Intent(this@SplashScreen, AirDistance::class.java)) }, 2000)
     }
 
 }
