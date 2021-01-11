@@ -33,8 +33,7 @@
         android:src="@drawable/delete_icon"
         app:layout_constraintBottom_toBottomOf="@id/historyLabel"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="@id/historyLabel"
-        app:tint="@android:color/darker_gray" />
+        app:layout_constraintTop_toTopOf="@id/historyLabel" />
 
     <androidx.constraintlayout.widget.Barrier
         android:id="@+id/headerSep"

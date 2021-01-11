@@ -41,4 +41,7 @@
 
     <string name="map_type">Map Type</string>
 
+    <string name="turn_on_gps">Turn on GPS</string>
+    <string name="ok">OK</string>
+
 </resources>
