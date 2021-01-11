@@ -10,5 +10,7 @@ class Constants {
 
         const val DistanceType_Miles = "Miles"
         const val DistanceUnit_Miles = "Mi"
+
+        const val PermissionFineLocation = 101
     }
 }
