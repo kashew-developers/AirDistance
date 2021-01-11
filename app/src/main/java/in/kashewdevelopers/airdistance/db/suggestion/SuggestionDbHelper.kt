@@ -12,7 +12,7 @@ class SuggestionDbHelper(context: Context) : SQLiteOpenHelper(context, DB_NAME, 
         private const val DB_NAME = "places"
         private const val DB_VERSION = 1
 
-        const val COLUMN_PLACE_NAME = "Name"
+        const val COLUMN_PLACE_NAME = "NAME"
     }
 
     override fun onCreate(db: SQLiteDatabase?) {
