@@ -54,7 +54,7 @@ class HistoryManager(val context: Context) {
     }
 
     fun updateDestinationName(dstLatLng: String, dstName: String) {
-        db?.let { dbHelper.updateSourceName(it, dstLatLng, dstName) }
+        db?.let { dbHelper.updateDestinationName(it, dstLatLng, dstName) }
     }
 
     fun delete(hashCode: String) {
